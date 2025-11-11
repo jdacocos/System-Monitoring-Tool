@@ -1,0 +1,39 @@
+import pytest
+from ./process_struct import ProcessInfo
+
+def test_process_info_creation():
+    """Test that ProcessInfo can be created and fields are readable."""
+
+    # Arrange: populate a dummy process
+    p = ProcessInfo(
+        user="root",
+        pid=1234,
+        cpu_percent=12.5,
+        mem_percent=45.3,
+        vsz=1048576,
+        rss=204800,
+        tty="?",
+        stat="S",
+        start="12:34",
+        time="00:01:23",
+        command="/usr/bin/python3"
+    )
+
+    # Assert: all fields are correctly set
+    assert p.user == "root"
+    assert p.pid == 1234
+    assert isinstance(p.cpu_percent, float)
+    assert isinstance(p.mem_percent, float)
+    assert p.vsz == 1048576
+    assert p.rss == 204800
+    assert p.tty == "?"
+    assert p.stat == "S"
+    assert p.start == "12:34"
+    assert p.time == "00:01:23"
+    assert p.command == "/usr/bin/python3"
+
+    # Optional: test string representation
+    s = str(p)
+    assert "ProcessInfo" in s
+    assert "root" in s
+    assert "1234" in s
