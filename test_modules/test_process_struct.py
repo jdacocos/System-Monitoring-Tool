@@ -2,7 +2,9 @@ import pytest
 from process_struct import ProcessInfo
 
 def test_process_info_creation():
+
     """Test that ProcessInfo can be created and fields are readable."""
+
     p = ProcessInfo(
         user="root",
         pid=1234,
@@ -40,7 +42,9 @@ def test_process_info_creation():
 # Expected failure test
 @pytest.mark.xfail(reason="PID should not accept negative numbers yet")
 def test_process_info_invalid_pid():
+
     """This test is expected to fail for now."""
+
     p = ProcessInfo(
         user="root",
         pid=-1,  # Invalid PID
@@ -60,7 +64,9 @@ def test_process_info_invalid_pid():
 # ------------------------------------------------------------
 # Test that an exception is raised
 def test_invalid_cpu_percent():
+
     """CPU percent must be float between 0 and 100."""
+
     with pytest.raises(ValueError):
         p = ProcessInfo(
             user="root",
