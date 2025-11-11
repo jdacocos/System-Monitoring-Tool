@@ -20,7 +20,7 @@ def test_process_info_creation():
     )
 
     # Print each field for verification
-    print(f"user: {p.user}")
+    print(f"\nuser: {p.user}")
     print(f"pid: {p.pid}")
     print(f"cpu_percent: {p.cpu_percent}")
     print(f"mem_percent: {p.mem_percent}")
@@ -121,7 +121,7 @@ def test_multiple_processes(user, pid):
         command="python"
     )
 
-    print(f"Testing ProcessInfo(user={p.user}, pid={p.pid})")
+    print(f"\nTesting ProcessInfo(user={p.user}, pid={p.pid})")
 
     assert p.user == user
     assert p.pid == pid

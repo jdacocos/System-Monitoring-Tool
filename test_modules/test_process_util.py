@@ -91,9 +91,9 @@ def test_get_process_info_live():
     assert isinstance(processes, list)
     assert len(processes) > 0
 
-    print("Retrieved processes:")
+    print("\nRetrieved processes:")
     for p in processes:
-        print(f"PID: {p.pid}, USER: {p.user}, CMD: {p.command}")
+        print(f"USER: {p.user}, PID: {p.pid}, CMD: {p.command}")
 
     # Optional: further assertions
     for p in processes:
