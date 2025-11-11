@@ -78,3 +78,23 @@ def test_get_process_info_permission_error(monkeypatch):
     processes = []
     ret = get_process_info(processes, limit=2)
     assert ret == 0
+
+def test_get_process_info_live():
+    """Test get_process_info with actual system processes."""
+    from process_util import get_process_info
+    from process_struct import ProcessInfo
+
+    processes = []
+    ret = get_process_info(processes, limit=10)
+
+    assert ret == 0
+    assert isinstance(processes, list)
+    assert len(processes) > 0
+
+    print("Retrieved processes:")
+    for p in processes:
+        print(f"PID: {p.pid}, USER: {p.user}, CMD: {p.command}")
+
+    # Optional: further assertions
+    for p in processes:
+        assert isinstance(p, ProcessInfo)

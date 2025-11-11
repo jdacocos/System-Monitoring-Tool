@@ -19,6 +19,19 @@ def test_process_info_creation():
         command="/usr/bin/python3"
     )
 
+    # Print each field for verification
+    print(f"user: {p.user}")
+    print(f"pid: {p.pid}")
+    print(f"cpu_percent: {p.cpu_percent}")
+    print(f"mem_percent: {p.mem_percent}")
+    print(f"vsz: {p.vsz}")
+    print(f"rss: {p.rss}")
+    print(f"tty: {p.tty}")
+    print(f"stat: {p.stat}")
+    print(f"start: {p.start}")
+    print(f"time: {p.time}")
+    print(f"command: {p.command}")
+    
     assert p.user == "root"
     assert p.pid == 1234
     assert isinstance(p.cpu_percent, float)
@@ -107,5 +120,8 @@ def test_multiple_processes(user, pid):
         time="00:00:01",
         command="python"
     )
+
+    print(f"Testing ProcessInfo(user={p.user}, pid={p.pid})")
+
     assert p.user == user
     assert p.pid == pid

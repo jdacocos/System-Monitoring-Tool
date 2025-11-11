@@ -6,12 +6,11 @@ import time
 from typing import List
 
 def _read_proc_stat(pid: int):
-
     """Return (comm, state) from /proc/<pid>/stat."""
-
-    data = f.read().split()
-    comm = data[1].strip("()")
-    state = data[2]
+    with open(f"/proc/{pid}/stat") as f:
+        data = f.read().split()
+        comm = data[1].strip("()")
+        state = data[2]
     return comm, state
 
 def _read_proc_status(pid: int):
@@ -41,7 +40,6 @@ def get_process_info(process_list: List[ProcessInfo], limit: int = 10) -> int:
         int: 0 if successfully retrieved processes, 1 if failed
     
     """
-    fail = 0
     
     try:
         process_list.clear()
