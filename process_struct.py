@@ -59,3 +59,11 @@ class ProcessInfo:
     start: str
     time: str
     command: str
+
+    def __post_init__(self):
+        if not (0 <= self.cpu_percent <= 100):
+            raise ValueError(f"cpu_percent must be between 0 and 100, got {self.cpu_percent}")
+        if not (0 <= self.mem_percent <= 100):
+            raise ValueError(f"mem_percent must be between 0 and 100, got {self.mem_percent}")
+        if self.pid < 0:
+            raise ValueError(f"PID must be non-negative, got {self.pid}")
