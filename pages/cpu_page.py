@@ -1,71 +1,93 @@
 import curses
 import psutil
 import time
-from utils.ui_helpers import init_colors, draw_title, draw_box, draw_footer, draw_bar
+
+from utils.ui_helpers import (init_colors, draw_content_window, draw_bar, draw_section_header)
 from utils.input_helpers import handle_input, GLOBAL_KEYS
 
-# Replace this function with later with our own calculations
+
 def get_cpu_stats() -> dict:
     """Fetch and return key CPU statistics."""
+
+    per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+    overall = sum(per_core) / len(per_core) if per_core else 0.0
+    freq = psutil.cpu_freq()
     return {
-        "overall": psutil.cpu_percent(interval=0.2),
-        "per_core": psutil.cpu_percent(interval=0.2, percpu=True),
-        "freq": psutil.cpu_freq(),
+        "overall": overall,
+        "per_core": per_core,
+        "freq": freq,
         "logical": psutil.cpu_count(logical=True),
-        "physical": psutil.cpu_count(logical=False)
+        "physical": psutil.cpu_count(logical=False),
     }
 
 
-def render_overall_cpu(stdscr: curses.window, overall: float,
-                       freq, physical: int, logical: int) -> None:
+def render_overall_cpu(win: curses.window, stats: dict) -> None:
     """Render overall CPU usage and frequency information."""
-    stdscr.addstr(2, 4, f"Overall CPU Usage: {overall:>5.1f}%")
-    draw_bar(stdscr, 3, 4, "CPU", overall)
-    stdscr.addstr(5, 4, f"CPU Frequency: {freq.current:.1f} MHz (min {freq.min:.0f}, max {freq.max:.0f})")
-    stdscr.addstr(6, 4, f"Cores: {physical} physical / {logical} logical")
+
+    freq = stats["freq"]
+    draw_section_header(win, 1, "Overall CPU")
+    draw_bar(win, 2, 2, "Usage", stats["overall"])
+
+    if freq is not None:
+        win.addstr(3, 4, f"Frequency: {freq.current:6.1f} MHz (min {freq.min:.0f}, max {freq.max:.0f})")
+    else:
+        win.addstr(3, 4, "Frequency information unavailable")
+
+    win.addstr(4, 4, f"Cores: {stats['physical']} physical / {stats['logical']} logical")
 
 
-def render_per_core_usage(stdscr: curses.window, per_core: list[float]) -> None:
-    """Render per-core CPU usage bars."""
-    stdscr.attron(curses.color_pair(1))
-    stdscr.addstr(8, 4, "Per-Core Usage:")
-    stdscr.attroff(curses.color_pair(1))
+def render_per_core_usage(win: curses.window, per_core: list[float]) -> None:
+    """Render per-core CPU usage bars in a responsive grid."""
 
-    for i, core in enumerate(per_core):
-        label = f"Core {i + 1:02d}"
-        draw_bar(stdscr, 9 + i, 4, label, core)
+    draw_section_header(win, 6, "Per-Core Usage")
 
-def render_cpu(stdscr: curses.window) -> int:
-    """
-    Render the CPU Monitor page.
-    Displays overall and per-core CPU usage, frequency, and core count.
-    Returns the pressed key for navigation.
-    """
+    height, width = win.getmaxyx()
+    available_width = max(24, width - 4)
+    column_width = 28
+    cols = max(1, available_width // column_width)
+    bar_width = max(10, column_width - 14)
+
+    start_y = 7
+    for index, value in enumerate(per_core):
+        row = index // cols
+        col = index % cols
+        y = start_y + row * 2
+        x = 2 + col * column_width
+
+        if y >= height - 2:
+            break
+
+        label = f"Core {index + 1:02d}"
+        draw_bar(win, y, x, label, value, width=bar_width)
+
+
+def render_cpu(stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str) -> int:
+    """Render the CPU monitor page."""
+
     init_colors()
     curses.curs_set(0)
     stdscr.nodelay(True)
 
     while True:
-        stdscr.erase()
-        stdscr.bkgd(' ', curses.color_pair(1))
-        draw_title(stdscr, "CPU MONITOR")
-        draw_box(stdscr)
+        content_win = draw_content_window(stdscr, title="CPU Monitor", nav_items=nav_items, active_page=active_page)
+
+        if content_win is None:
+            key = handle_input(stdscr, GLOBAL_KEYS)
+            if key != -1:
+                return key
+            time.sleep(0.2)
+            continue
 
         stats = get_cpu_stats()
-        render_overall_cpu(
-            stdscr,
-            overall=stats["overall"],
-            freq=stats["freq"],
-            physical=stats["physical"],
-            logical=stats["logical"]
-        )
-        render_per_core_usage(stdscr, stats["per_core"])
+        render_overall_cpu(content_win, stats)
+        render_per_core_usage(content_win, stats["per_core"])
 
-        draw_footer(stdscr)
-        stdscr.refresh()
+        content_win.noutrefresh()
+        stdscr.noutrefresh()
+        curses.doupdate()
 
         key = handle_input(stdscr, GLOBAL_KEYS)
         if key != -1:
             return key
 
-        time.sleep(0.2)
+        time.sleep(0.3)

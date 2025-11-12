@@ -13,4 +13,5 @@ def handle_input(stdscr: curses.window, valid_keys: tuple[int, ...] = ()) -> int
 
 
 # Optional global constant for shared navigation keys
-GLOBAL_KEYS = (ord('d'), ord('1'), ord('2'), ord('3'), ord('4'), ord('q'))
+GLOBAL_KEYS = (ord('d'), ord('D'), ord('1'), ord('2'),
+                ord('3'), ord('4'), ord('q'), ord('Q'))
