@@ -34,7 +34,7 @@ def draw_process_list(win: curses.window, processes: list[dict],
     """Render a scrollable list of processes with highlighting."""
     height, width = win.getmaxyx()
 
-    draw_section_header(win, 1, f"Running Processes (Sorted by {sort_mode.upper()})")
+    draw_section_header(win, 1, f"Running Processes (Sort by {sort_mode.upper()})")
     win.addstr(2, 2, f"{'PID':<8}{'NAME':<30}{'CPU%':>8}{'MEM%':>10}")
     win.hline(3, 2, curses.ACS_HLINE, width - 4)
 
@@ -59,7 +59,7 @@ def draw_process_list(win: curses.window, processes: list[dict],
 
     help_y = height - 2
     win.attron(curses.color_pair(2))
-    win.addstr(help_y, 2, "[↑/↓] Move   [C]PU  [M]em  [P]ID  [N]ame  [K]ill  [Q]uit")
+    win.addstr(help_y, 2, "[↑/↓] Move   [C]PU  [M]em  [P]ID  [N]ame  [K]ill")
     win.attroff(curses.color_pair(2))
 
 
@@ -75,6 +75,10 @@ def render_processes(stdscr: curses.window,
     selected_index = 0
     scroll_start = 0
     sort_mode = "cpu"
+    refresh_interval = 1.0
+    last_refresh = 0.0
+    cached_processes: list[dict] = []
+    needs_refresh = True
 
     while True:
         content_win = draw_content_window(
@@ -91,7 +95,13 @@ def render_processes(stdscr: curses.window,
             time.sleep(0.1)
             continue
 
-        processes = get_all_processes(sort_mode)
+        now = time.time()
+        if needs_refresh or (now - last_refresh) >= refresh_interval or not cached_processes:
+            cached_processes = get_all_processes(sort_mode)
+            last_refresh = now
+            needs_refresh = False
+
+        processes = cached_processes
         if not processes:
             content_win.addstr(2, 2, "No processes found.")
             content_win.refresh()
@@ -128,23 +138,28 @@ def render_processes(stdscr: curses.window,
         # Sorting
         elif key in (ord('c'), ord('C')):
             sort_mode = "cpu"
+            needs_refresh = True
         elif key in (ord('m'), ord('M')):
             sort_mode = "mem"
+            needs_refresh = True
         elif key in (ord('p'), ord('P')):
             sort_mode = "pid"
+            needs_refresh = True
         elif key in (ord('n'), ord('N')):
             sort_mode = "name"
+            needs_refresh = True
 
         # Kill selected process
         elif key in (ord('k'), ord('K')):
             try:
                 pid = processes[selected_index]['pid']
                 psutil.Process(pid).kill()
+                needs_refresh = True
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 pass
 
         # Switch pages or quit
-        elif key in (ord('d'), ord('1'), ord('3'), ord('4'), ord('q')):
+        elif key in (ord('d'), ord('D'), ord('1'), ord('3'), ord('4'), ord('5'), ord('q'), ord('Q')):
             return key
 
         time.sleep(0.1)

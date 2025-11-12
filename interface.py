@@ -4,7 +4,7 @@ from pages.cpu_page import render_cpu
 from pages.process_page import render_processes
 from pages.memory_page import render_memory
 from pages.network_page import render_network
-
+from pages.disk_page import render_disk
 
 NAV_ITEMS: list[tuple[str, str, str]] = [
     ("dashboard", "Dashboard", "d"),
@@ -12,6 +12,7 @@ NAV_ITEMS: list[tuple[str, str, str]] = [
     ("processes", "Processes", "2"),
     ("network", "Network", "3"),
     ("memory", "Memory", "4"),
+    ("disk", "Disk I/O", "5"),
 ]
 
 
@@ -22,6 +23,7 @@ KEY_TO_PAGE = {
     ord("2"): "processes",
     ord("3"): "network",
     ord("4"): "memory",
+    ord("5"): "disk",
 }
 
 
@@ -45,6 +47,8 @@ def run_interface(stdscr: curses.window) -> None:
             key = render_network(stdscr, NAV_ITEMS, current_page)
         elif current_page == "memory":
             key = render_memory(stdscr, NAV_ITEMS, current_page)
+        elif current_page == "disk":
+            key = render_disk(stdscr, NAV_ITEMS, current_page)
         else:
             key = ord("q")
 

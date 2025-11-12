@@ -1,10 +1,11 @@
-"""Utility helpers for rendering curses based user interfaces."""
+"""Utility helpers for rendering curses-based user interfaces."""
 
 from __future__ import annotations
-
 import curses
 from datetime import datetime
 from typing import Iterable, Sequence
+
+SPARKLINE_CHARS = "▁▂▃▄▅▆▇█"
 
 SIDEBAR_WIDTH = 22
 MIN_HEIGHT = 22
@@ -13,7 +14,6 @@ MIN_WIDTH = 80
 
 def init_colors() -> None:
     """Initialize the color palette used throughout the application."""
-
     curses.start_color()
     curses.use_default_colors()
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)   # Header / footer
@@ -26,8 +26,7 @@ def init_colors() -> None:
 
 
 def draw_header(stdscr: curses.window, title: str) -> None:
-    """Render the top header banner with a timestamp."""
-
+    """Render the top header banner with a dynamically updating timestamp."""
     height, width = stdscr.getmaxyx()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
@@ -41,7 +40,6 @@ def draw_sidebar(stdscr: curses.window,
                  nav_items: Sequence[tuple[str, str, str]],
                  active_page: str) -> None:
     """Render the navigation sidebar highlighting the active page."""
-
     height, _ = stdscr.getmaxyx()
     stdscr.attron(curses.color_pair(7))
     for y in range(1, height - 1):
@@ -56,8 +54,7 @@ def draw_sidebar(stdscr: curses.window,
         y = 3 + idx * 2
         if y >= height - 2:
             break
-
-        display = f"[{key.upper():>2}] {label:<12}"[: SIDEBAR_WIDTH - 2]
+        display = f"[{key.upper()}] {label:<12}"[: SIDEBAR_WIDTH - 2]
         attr = curses.color_pair(6) if page_id == active_page else curses.color_pair(5)
         stdscr.attron(attr)
         stdscr.addstr(y, 1, display.ljust(SIDEBAR_WIDTH - 2))
@@ -70,7 +67,6 @@ def draw_sidebar(stdscr: curses.window,
 def draw_footer(stdscr: curses.window,
                 nav_items: Iterable[tuple[str, str, str]]) -> None:
     """Render a footer with contextual key bindings."""
-
     height, width = stdscr.getmaxyx()
     instructions = "  ".join(
         f"[{key}] {label}" for _, label, key in nav_items
@@ -78,7 +74,9 @@ def draw_footer(stdscr: curses.window,
 
     stdscr.attron(curses.color_pair(1))
     stdscr.hline(height - 1, 0, " ", width)
+    # stdscr.attron(curses.A_BOLD)
     stdscr.addstr(height - 1, 2, instructions[: max(0, width - 4)])
+    # stdscr.attroff(curses.A_BOLD)
     stdscr.attroff(curses.color_pair(1))
 
 
@@ -91,7 +89,6 @@ def draw_content_window(stdscr: curses.window, title: str,
     Returns the content window where individual pages can render information.
     If the terminal is too small, a message is rendered and ``None`` is returned.
     """
-
     height, width = stdscr.getmaxyx()
     if height < MIN_HEIGHT or width < MIN_WIDTH:
         stdscr.erase()
@@ -107,24 +104,12 @@ def draw_content_window(stdscr: curses.window, title: str,
         stdscr.refresh()
         return None
 
-    # Clear background each frame
     stdscr.erase()
     stdscr.bkgd(" ", curses.color_pair(5))
-
-    # Draw dynamic elements (header, sidebar, footer)
+    draw_header(stdscr, title)
     draw_sidebar(stdscr, nav_items, active_page)
     draw_footer(stdscr, nav_items)
-    
-    # Instead of caching the header once, we redraw it each frame with updated timestamp
-    height, width = stdscr.getmaxyx()
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
-    stdscr.hline(0, 0, " ", width)
-    stdscr.addstr(0, 2, title[: max(0, width - 4)])
-    stdscr.addstr(0, max(2, width - len(timestamp) - 2), timestamp)
-    stdscr.attroff(curses.color_pair(1) | curses.A_BOLD)
 
-    # Create bordered content area
     content_height = height - 4
     content_width = width - SIDEBAR_WIDTH - 3
     content_win = stdscr.derwin(content_height, content_width, 2, SIDEBAR_WIDTH + 1)
@@ -142,7 +127,6 @@ def draw_content_window(stdscr: curses.window, title: str,
 def draw_bar(stdscr: curses.window, y: int, x: int,
              label: str, value: float, width: int = 34) -> None:
     """Draw a horizontal usage bar inside the given window."""
-
     value = max(0.0, min(value, 100.0))
     filled = int((value / 100) * width)
     bar = "█" * filled + "░" * (width - filled)
@@ -154,15 +138,61 @@ def draw_bar(stdscr: curses.window, y: int, x: int,
 
 def draw_section_header(stdscr: curses.window, y: int, text: str) -> None:
     """Render a section header inside the provided window."""
-
     stdscr.attron(curses.color_pair(2) | curses.A_BOLD)
     stdscr.addstr(y, 2, text)
     stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
 
 
+def draw_sparkline(stdscr: curses.window, y: int, x: int, data: Sequence[float],
+                   width: int, label: str, unit: str = "",
+                   color_pair: int = 2,
+                   fixed_min: float | None = None,
+                   fixed_max: float | None = None) -> None:
+    """Render a simple one-line sparkline graph for recent samples."""
+    if not data or width <= 0:
+        return
+
+    height, total_width = stdscr.getmaxyx()
+    if y >= height - 1 or x >= total_width - 1:
+        return
+
+    label_field = f"{label:<12}"
+    graph_start = x + len(label_field)
+    max_width = max(1, min(width, total_width - graph_start - 12))
+    samples = data[-max_width:]
+
+    minimum = fixed_min if fixed_min is not None else min(samples)
+    maximum = fixed_max if fixed_max is not None else max(samples)
+    if maximum - minimum < 1e-6:
+        maximum = minimum + 1e-6
+
+    levels = len(SPARKLINE_CHARS) - 1
+    spark_chars = [
+        SPARKLINE_CHARS[
+            int(min(levels, max(0, (value - minimum) / (maximum - minimum) * levels)))
+        ]
+        for value in samples
+    ]
+
+    sparkline = "".join(spark_chars).rjust(max_width)
+    value_text = f"{samples[-1]:6.2f}{unit}"
+
+    stdscr.attron(curses.color_pair(color_pair) | curses.A_BOLD)
+    stdscr.addstr(y, x, label_field)
+    stdscr.attroff(curses.color_pair(color_pair) | curses.A_BOLD)
+
+    stdscr.addstr(y, graph_start, " " * max_width)
+    stdscr.addstr(y, graph_start, sparkline[:max_width])
+
+    value_start = min(total_width - len(value_text) - 1, graph_start + max_width + 1)
+    value_start = max(graph_start + 1, value_start)
+    if value_start < total_width - 1:
+        truncated = value_text[: max(0, total_width - value_start - 1)]
+        stdscr.addstr(y, value_start, truncated)
+
+
 def format_bytes(num_bytes: float) -> str:
     """Return a human readable string for a byte value."""
-
     for unit in ["B", "KB", "MB", "GB", "TB"]:
         if num_bytes < 1024:
             return f"{num_bytes:6.1f} {unit}"

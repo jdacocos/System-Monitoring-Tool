@@ -1,8 +1,15 @@
 import curses
+from collections import deque
 import psutil
 import time
 
-from utils.ui_helpers import (init_colors, draw_content_window, draw_section_header, format_bytes)
+from utils.ui_helpers import (
+    init_colors,
+    draw_content_window,
+    draw_section_header,
+    format_bytes,
+    draw_sparkline,
+)
 
 from utils.input_helpers import handle_input, GLOBAL_KEYS
 
@@ -27,7 +34,13 @@ def get_network_stats(old_net, old_time: float) -> tuple[dict, psutil._common.sn
     return stats, new_net, new_time
 
 
-def render_network_stats(win: curses.window, stats: dict) -> None:
+UPLOAD_HISTORY: deque[float] = deque(maxlen=120)
+DOWNLOAD_HISTORY: deque[float] = deque(maxlen=120)
+
+
+def render_network_stats(win: curses.window, stats: dict,
+                         upload_history: deque[float],
+                         download_history: deque[float]) -> int:
     """Render upload/download speeds and totals."""
 
     draw_section_header(win, 1, "Throughput")
@@ -45,11 +58,19 @@ def render_network_stats(win: curses.window, stats: dict) -> None:
     win.addstr(5, 2, f"Total Sent    : {format_bytes(stats['total_sent'])}")
     win.addstr(6, 2, f"Total Received: {format_bytes(stats['total_recv'])}")
 
+    width = win.getmaxyx()[1] - 6
+    draw_sparkline(win, 8, 2, list(upload_history), width=width,
+                   label="Upload", unit=" MB/s")
+    draw_sparkline(win, 9, 2, list(download_history), width=width,
+                   label="Download", unit=" MB/s")
 
-def render_active_interfaces(win: curses.window, interfaces: dict) -> None:
+    return 11
+
+
+def render_active_interfaces(win: curses.window, interfaces: dict, start_y: int) -> None:
     """Display up to four active network interfaces with their IP addresses."""
 
-    draw_section_header(win, 8, "Active Interfaces")
+    draw_section_header(win, start_y, "Active Interfaces")
 
     for i, (iface, addrs) in enumerate(interfaces.items()):
         if i >= 5:
@@ -61,7 +82,7 @@ def render_active_interfaces(win: curses.window, interfaces: dict) -> None:
             if getattr(addr.family, "name", str(addr.family)) in ("AF_INET", "AF_LINK", "AddressFamily.AF_INET")
         ]
         ip_str = ", ".join(ip_list) or "No address"
-        win.addstr(9 + i, 4, f"{iface:<10} {ip_str}")
+        win.addstr(start_y + 1 + i, 4, f"{iface:<10} {ip_str}")
 
 
 def render_network(stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str) -> int:
@@ -85,8 +106,11 @@ def render_network(stdscr: curses.window, nav_items: list[tuple[str, str, str]],
             continue
 
         stats, old_net, old_time = get_network_stats(old_net, old_time)
-        render_network_stats(content_win, stats)
-        render_active_interfaces(content_win, stats["interfaces"])
+        UPLOAD_HISTORY.append(max(0.0, stats["sent_speed"]))
+        DOWNLOAD_HISTORY.append(max(0.0, stats["recv_speed"]))
+
+        next_y = render_network_stats(content_win, stats, UPLOAD_HISTORY, DOWNLOAD_HISTORY)
+        render_active_interfaces(content_win, stats["interfaces"], start_y=next_y)
 
         content_win.noutrefresh()
         stdscr.noutrefresh()

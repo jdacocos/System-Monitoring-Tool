@@ -1,8 +1,15 @@
 import curses
+from collections import deque
 import psutil
 import time
 
-from utils.ui_helpers import (init_colors, draw_content_window, draw_bar, draw_section_header)
+from utils.ui_helpers import (
+    init_colors,
+    draw_content_window,
+    draw_bar,
+    draw_section_header,
+    draw_sparkline,
+)
 from utils.input_helpers import handle_input, GLOBAL_KEYS
 
 
@@ -21,7 +28,10 @@ def get_cpu_stats() -> dict:
     }
 
 
-def render_overall_cpu(win: curses.window, stats: dict) -> None:
+CPU_HISTORY: deque[float] = deque(maxlen=120)
+
+
+def render_overall_cpu(win: curses.window, stats: dict, history: deque[float]) -> int:
     """Render overall CPU usage and frequency information."""
 
     freq = stats["freq"]
@@ -35,11 +45,17 @@ def render_overall_cpu(win: curses.window, stats: dict) -> None:
 
     win.addstr(4, 4, f"Cores: {stats['physical']} physical / {stats['logical']} logical")
 
+    width = win.getmaxyx()[1] - 6
+    draw_sparkline(win, 5, 2, list(history), width=width, label="Trend", unit="%",
+                   fixed_min=0.0, fixed_max=100.0)
 
-def render_per_core_usage(win: curses.window, per_core: list[float]) -> None:
+    return 7
+
+
+def render_per_core_usage(win: curses.window, per_core: list[float], start_y: int = 8) -> None:
     """Render per-core CPU usage bars in a responsive grid."""
 
-    draw_section_header(win, 6, "Per-Core Usage")
+    draw_section_header(win, start_y - 1, "Per-Core Usage")
 
     height, width = win.getmaxyx()
     available_width = max(24, width - 4)
@@ -47,7 +63,6 @@ def render_per_core_usage(win: curses.window, per_core: list[float]) -> None:
     cols = max(1, available_width // column_width)
     bar_width = max(10, column_width - 14)
 
-    start_y = 7
     for index, value in enumerate(per_core):
         row = index // cols
         col = index % cols
@@ -79,8 +94,9 @@ def render_cpu(stdscr: curses.window, nav_items: list[tuple[str, str, str]], act
             continue
 
         stats = get_cpu_stats()
-        render_overall_cpu(content_win, stats)
-        render_per_core_usage(content_win, stats["per_core"])
+        CPU_HISTORY.append(stats["overall"])
+        next_y = render_overall_cpu(content_win, stats, CPU_HISTORY)
+        render_per_core_usage(content_win, stats["per_core"], start_y=next_y)
 
         content_win.noutrefresh()
         stdscr.noutrefresh()
