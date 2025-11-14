@@ -2,14 +2,7 @@
 
 import time
 import os
-
-def read_file(path):
-    fd = os.open(path, os.O_RDONLY)
-
-    #python handles buffer unlike in C
-    data = os.read(fd, 4096).decode()
-    os.close(fd)
-    return data
+from utilities import read_file
 
 def get_cpu_times():
     content = read_file("/proc/stat")
