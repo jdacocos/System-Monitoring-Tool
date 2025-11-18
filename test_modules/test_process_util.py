@@ -1,100 +1,48 @@
 import pytest
+import os
+
 from process_struct import ProcessInfo
-from process_util import get_process_info
+from process_util import get_process_pids
+from process_util import open_file_system
 
-def test_get_process_info_basic():
+def test_open_file_system():
+    """
+    Tests that /proc path for the Linux file system correctly displays all contents.
+    """
 
-    """Test that get_process_info fills the list correctly and returns 0."""
+    fs = open_file_system()
 
-    processes = []
-    ret = get_process_info(processes, limit=5)
+    # 1. Ensure return type is ScandirIterator
+    assert type(fs) is type(os.scandir("/"))
 
-    # Check return value
-    assert ret == 0
+    # 2. Ensure iterating works (no errors)
+    entries = list(fs)
+    assert len(entries) > 0  # 3. /proc must contain something
 
-    # Check that the list is populated
-    assert isinstance(processes, list)
-    assert len(processes) > 0
-    assert len(processes) <= 5
+    # Optional: ensure entries have names
+    assert all(hasattr(e, "name") for e in entries)
 
-    # Check the first item
-    first_proc = processes[0]
-    assert isinstance(first_proc, ProcessInfo)
-    assert hasattr(first_proc, 'user')
-    assert hasattr(first_proc, 'pid')
-    assert hasattr(first_proc, 'command')
+    print(f"\n Print all contents of /proc:\n")
+    for fs in entries:
+        print(fs.name)
+    
+def test_get_process_pids():
+    """
+    Tests that all the pids are successfully retrieved from /proc.
+    """
 
-def test_get_process_info_empty_list():
+    pids = get_process_pids()
 
-    """Ensure the list is cleared before populating."""
+    # 1. Should return a list
+    assert isinstance(pids, list)
 
-    processes = [ProcessInfo(
-        user="dummy",
-        pid=9999,
-        cpu_percent=0.0,
-        mem_percent=0.0,
-        vsz=0,
-        rss=0,
-        tty="?",
-        stat="S",
-        start="00:00",
-        time="00:00:00",
-        command="none"
-    )]
+    # 2. All entries should be integers
+    assert all(isinstance(pid, int) for pid in pids)
 
-    ret = get_process_info(processes, limit=3)
-    assert ret == 0
-    assert len(processes) <= 3
-    # The original dummy entry should have been cleared
-    assert processes[0].pid != 9999
+    # 3. All PIDs should correspond to directories in /proc
+    assert all(os.path.isdir(f"/proc/{pid}") for pid in pids)
 
-@pytest.mark.parametrize("limit", [1, 3, 5])
-def test_get_process_info_limit(limit):
-
-    """Test that limit parameter restricts the number of processes returned."""
-
-    processes = []
-    ret = get_process_info(processes, limit=limit)
-    assert ret == 0
-    assert len(processes) <= limit
-
-@pytest.mark.xfail(reason="Handles PermissionError gracefully for inaccessible processes")
-def test_get_process_info_permission_error(monkeypatch):
-
-    """Simulate PermissionError to test graceful handling."""
-
-    import process_util
-
-    def fake_listdir(path):
-        return ["1", "2"]
-
-    def fake_open(*args, **kwargs):
-        raise PermissionError
-
-    monkeypatch.setattr(process_util.os, "listdir", fake_listdir)
-    monkeypatch.setattr(process_util, "_read_proc_stat", lambda pid: ("cmd", "S"))
-    monkeypatch.setattr(process_util, "_read_proc_status", lambda pid: ("root", 0, 0))
-    # The function should still return 0 despite PermissionError inside try
-    processes = []
-    ret = get_process_info(processes, limit=2)
-    assert ret == 0
-
-def test_get_process_info_live():
-    """Test get_process_info with actual system processes."""
-    from process_util import get_process_info
-    from process_struct import ProcessInfo
-
-    processes = []
-    ret = get_process_info(processes, limit=10)
-
-    assert ret == 0
-    assert isinstance(processes, list)
-    assert len(processes) > 0
-
-    print("\nRetrieved processes:")
-    for p in processes:
-        print(f"USER: {p.user}, PID: {p.pid}, CMD: {p.command}")
-
-    # Optional: further assertions
-    for p in processes:
-        assert isinstance(p, ProcessInfo)
+    # 4. Process should be included
+    current_pid = os.getpid()
+    assert current_pid in pids
+    
