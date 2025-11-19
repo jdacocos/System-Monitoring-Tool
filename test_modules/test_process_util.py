@@ -53,12 +53,13 @@ def test_get_process_user():
     # Ensure at least one valid PID
     assert len(pids) > 0
 
-    pid = pids[0]
+    print("\n Listing all PIDS and their users:\n")
 
-    uid = get_process_user(pid)
-
-    assert uid is not None
-    assert isinstance(uid, int)
-
-    # UID must be non-negative
-    assert uid >= 0
+    for pid in pids:
+        user = get_process_user(pid)
+        if user is not None:
+            print(f"PID: {pid}, User: {user}")
+    
+    assert user is not None
+    assert isinstance(user, str)
+    assert len(user) > 0
