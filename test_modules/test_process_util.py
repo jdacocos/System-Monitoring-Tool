@@ -2,8 +2,9 @@ import pytest
 import os
 
 from process_struct import ProcessInfo
-from process_util import get_process_pids
-from process_util import open_file_system
+from process_util import (
+    open_file_system, get_process_pids, get_process_user
+    )
 
 def test_open_file_system():
     """
@@ -46,3 +47,18 @@ def test_get_process_pids():
     current_pid = os.getpid()
     assert current_pid in pids
     
+def test_get_process_user():
+    pids = get_process_pids()
+
+    # Ensure at least one valid PID
+    assert len(pids) > 0
+
+    pid = pids[0]
+
+    uid = get_process_user(pid)
+
+    assert uid is not None
+    assert isinstance(uid, int)
+
+    # UID must be non-negative
+    assert uid >= 0
