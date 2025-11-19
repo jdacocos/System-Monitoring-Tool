@@ -3,7 +3,8 @@ import os
 
 from process_struct import ProcessInfo
 from process_util import (
-    open_file_system, get_process_pids, get_process_user
+    open_file_system, get_process_pids, get_process_user,
+    _uid_to_username, _read_proc_stat_total, _read_proc_pid_time
     )
 
 def test_open_file_system():
@@ -46,8 +47,22 @@ def test_get_process_pids():
     # 4. Process should be included
     current_pid = os.getpid()
     assert current_pid in pids
+
+def test_uid_to_username():
+    """
+    Tests that all uids are correctly converted to appropriate str usernames.
+    """
+    
+    uid = os.getuid()
+    username = _uid_to_username(uid)
+    print(f"Current UID {uid} corresponds to user: {username}")
+    assert username is not None
+    assert isinstance(username, str)
     
 def test_get_process_user():
+    """
+    Tests that it retrieves username associated with the processes.
+    """
     pids = get_process_pids()
 
     # Ensure at least one valid PID
@@ -63,3 +78,27 @@ def test_get_process_user():
     assert user is not None
     assert isinstance(user, str)
     assert len(user) > 0
+
+def test_read_proc_stat_total():
+    """
+    Tests that it returns the CPU jiffies.
+    """
+    total = _read_proc_stat_total()
+    print(f"Total CPU jiffies: {total}")
+    assert isinstance(total, int)
+    assert total >= 0
+
+
+def test_read_proc_pid_time():
+    """
+    Tests that it retrieves pid time.
+    """
+    pids = get_process_pids()
+    if not pids:
+        pytest.skip("No PIDs found")
+
+    pid = pids[0]
+    jiffies = _read_proc_pid_time(pid)
+    print(f"PID {pid} total jiffies: {jiffies}")
+    assert isinstance(jiffies, int)
+    assert jiffies >= 0

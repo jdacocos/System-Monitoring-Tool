@@ -111,6 +111,11 @@ def _read_proc_pid_time(pid: int) -> int:
     try:
         with open(stat_path, "r") as f:
             fields = f.read().split()
-            print(fields)
+            if len(fields) >= 15: # ensure utime and stime exists
+                utime = int(fields[13])
+                stime = int(fields[14])
+                total_proc_jiffies = utime + stime
     except (FileNotFoundError, IndexError, ValueError):
         pass
+    
+    return total_proc_jiffies
