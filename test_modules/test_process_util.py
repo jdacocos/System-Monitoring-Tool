@@ -4,6 +4,7 @@ import os
 from process_struct import ProcessInfo
 from process_util import (
     open_file_system, get_process_pids, get_process_user,
+    get_process_cpu_percent,
     _uid_to_username, _read_proc_stat_total, _read_proc_pid_time
     )
 
@@ -102,3 +103,35 @@ def test_read_proc_pid_time():
     print(f"PID {pid} total jiffies: {jiffies}")
     assert isinstance(jiffies, int)
     assert jiffies >= 0
+
+def test_get_process_cpu_percent():
+    """
+    Test get_process_cpu_percent() with:
+      1. Busy PID (current Python process)
+      2. First PID (usually idle PID 1)
+      3. A few PIDs to check type and range
+    """
+
+    pids = get_process_pids()
+    print(f"Found PIDs: {pids[:10]}...")  # only print first 10
+
+    # --- Test 1: Busy PID ---
+    busy_pid = os.getpid()  # PID of this Python process
+    cpu_busy = get_process_cpu_percent(busy_pid, interval=0.5)
+    print(f"CPU percent for busy PID {busy_pid}: {cpu_busy}%")
+    assert isinstance(cpu_busy, float), "CPU percent should be a float"
+    assert 0.0 <= cpu_busy <= 100.0, "CPU percent should be between 0 and 100"
+
+    # --- Test 2: First PID (likely idle) ---
+    first_pid = pids[0] if pids else 1
+    cpu_first = get_process_cpu_percent(first_pid, interval=0.5)
+    print(f"CPU percent for first PID {first_pid}: {cpu_first}%")
+    assert isinstance(cpu_first, float), "CPU percent should be a float"
+    assert 0.0 <= cpu_first <= 100.0, "CPU percent should be between 0 and 100"
+
+    # --- Test 3: Loop over a few PIDs ---
+    for pid in pids[:5]:
+        cpu = get_process_cpu_percent(pid, interval=0.5)
+        print(f"PID {pid} CPU: {cpu}%")
+        assert isinstance(cpu, float), f"CPU percent for PID {pid} should be a float"
+        assert 0.0 <= cpu <= 100.0, f"CPU percent for PID {pid} should be between 0 and 100"
