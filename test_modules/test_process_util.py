@@ -18,7 +18,7 @@ import pytest
 from process_struct import ProcessInfo
 from process_util import (
     open_file_system, get_process_pids, get_process_user,
-    get_process_cpu_percent, get_process_mem_percent,
+    get_process_cpu_percent, get_process_mem_percent, get_process_vsz,
     _uid_to_username, _read_proc_stat_total, _read_proc_pid_time,
     _read_meminfo_total, _read_proc_rss
     )
@@ -199,3 +199,34 @@ def test_get_process_mem_percent():
         assert isinstance(mem, float), f"Memory percent for PID {pid} should be a float"
         assert 0.0 <= mem <= 100.0, f"Memory percent for PID {pid} should be between 0 and 100"
         
+def test_get_process_vsz():
+    """
+    Test get_process_vsz() with:
+      1. Busy PID (current Python process)
+      2. First PID (usually PID 1)
+      3. A few PIDs to check type and range
+    """
+
+    pids = get_process_pids()
+    print(f"Found PIDs: {pids[:10]}...")  # Only print first 10 to avoid flooding
+
+    # --- Test 1: Busy PID ---
+    busy_pid = os.getpid()  # PID of this Python process
+    vsz_busy = get_process_vsz(busy_pid)
+    print(f"VSZ for busy PID {busy_pid}: {vsz_busy} KB")
+    assert isinstance(vsz_busy, int), "VSZ should be an integer"
+    assert vsz_busy >= 0, "VSZ must be non-negative"
+
+    # --- Test 2: First PID (likely idle) ---
+    first_pid = pids[0] if pids else 1
+    vsz_first = get_process_vsz(first_pid)
+    print(f"VSZ for first PID {first_pid}: {vsz_first} KB")
+    assert isinstance(vsz_first, int), "VSZ should be an integer"
+    assert vsz_first >= 0, "VSZ must be non-negative"
+
+    # --- Test 3: Loop over a few PIDs ---
+    for pid in pids[:5]:
+        vsz = get_process_vsz(pid)
+        print(f"PID {pid} VSZ: {vsz} KB")
+        assert isinstance(vsz, int), f"VSZ for PID {pid} should be an integer"
+        assert vsz >= 0, f"VSZ for PID {pid} must be non-negative"

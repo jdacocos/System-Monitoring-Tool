@@ -282,3 +282,33 @@ def get_process_mem_percent(pid: int) -> float:
 
     mem_percent = (rss_kb / total_mem_kb) * MemInfoIndex.MEM_PERCENT_SCALE
     return round(mem_percent, MemInfoIndex.MEM_PERCENT_ROUND_DIGITS)
+
+def get_process_vsz(pid: int) -> int:
+    """
+    Returns the virtual memory size (VSZ) of a process in KB.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        int: VSZ in KB, or 0 if process cannot be read.
+    """
+    vsz_kb = 0
+    stat_path = f"/proc/{pid}/stat"
+
+    try:
+        with open(stat_path, "r") as f:
+            fields = f.read().split()
+            if len(fields) > ProcessStateIndex.VSZ:
+                try:
+                    vsz_bytes = int(fields[ProcessStateIndex.VSZ])
+                    vsz_kb = vsz_bytes // ProcStatmIndex.BYTES_TO_KB
+                except ValueError as e:
+                    print(f"[ERROR] Invalid VSZ value for PID {pid}: {e}")
+            else:
+                print(f"[WARN] Not enough fields in {stat_path} to read VSZ")
+    except FileNotFoundError:
+        print(f"[ERROR] Process {pid} stat file not found: {stat_path}")
+    except PermissionError:
+        print(f"[ERROR] Permission denied when reading {stat_path}")
+    return vsz_kb

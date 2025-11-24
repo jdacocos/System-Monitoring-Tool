@@ -35,6 +35,7 @@ class ProcessStateIndex:
     UTIME = 13
     STIME = 14
     # Add more fields as needed
+    VSZ = 22
 
 class CpuStatIndex:
     """
