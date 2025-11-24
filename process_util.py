@@ -1,17 +1,12 @@
-from process_struct import ProcessInfo
-from process_constants import ProcessStateIndex, CpuStatIndex, PasswdIndex
-
 import os
 import time
 from typing import Iterator
 
-LNX_FS = '/proc'
-CPU_LABEL_COLUMN = 1
-CPU_PERCENT_SCALE = 100.0
-CPU_PERCENT_ROUND_DIGITS = 2
-CPU_PERCENT_INVALID = 0.0
-MIN_DELTA_TOTAL = 0
+from process_constants import (
+    ProcessStateIndex, CpuStatIndex, PasswdIndex, MemInfoIndex, ProcStatmIndex
+    )
 
+LNX_FS = '/proc'
 
 def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:
     """
@@ -85,8 +80,9 @@ def _read_proc_stat_total() -> int:
         with open("/proc/stat", "r") as f:
             line = f.readline()
             if line.startswith("cpu "):
-                fields = line.split()[CPU_LABEL_COLUMN:]
-                total_jiffies = sum(int(fields[i]) for i in range(CpuStatIndex.IDLE + 1)) # sum USER + NICE + SYSTEM + IDLE
+                fields = line.split()[CpuStatIndex.CPU_LABEL_COLUMN:]
+                # sum USER + NICE + SYSTEM + IDLE
+                total_jiffies = sum(int(fields[i]) for i in range(CpuStatIndex.IDLE + 1))
     except (FileNotFoundError, IndexError, ValueError):
         pass
     return total_jiffies
@@ -129,7 +125,6 @@ def get_process_cpu_percent(pid: int, interval: float = 0.1) -> float:
     proc_jiffies_1 = _read_proc_pid_time(pid)
     total_jiffies_1 = _read_proc_stat_total()
 
-    # Sleep for the interval
     time.sleep(interval)
 
     # Read jiffies again
@@ -141,9 +136,77 @@ def get_process_cpu_percent(pid: int, interval: float = 0.1) -> float:
     delta_total = total_jiffies_2 - total_jiffies_1
 
     # Avoid division by zero
-    if delta_total <= MIN_DELTA_TOTAL:
-        return CPU_PERCENT_INVALID
+    if delta_total <= CpuStatIndex.MIN_DELTA_TOTAL:
+        return CpuStatIndex.CPU_PERCENT_INVALID
 
-    cpu_percent = (delta_proc / delta_total) * CPU_PERCENT_SCALE
-    return round(cpu_percent, CPU_PERCENT_ROUND_DIGITS)
+    cpu_percent = (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE
+    return round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)
 
+def _read_meminfo_total() -> int:
+    """
+    Helper:
+    Reads total system memory in KB from /proc/meminfo.
+
+    Returns:
+        int: total memory in KB, or 0 if not found.
+    """
+    mem_total = 0
+    try:
+        with open("/proc/meminfo", "r") as f:
+            for line in f:
+                if line.startswith(MemInfoIndex.MEMTOTAL_LABEL):
+                    parts = line.split()
+                    if len(parts) > MemInfoIndex.MEMTOTAL_VALUE:
+                        try:
+                            mem_total = int(parts[MemInfoIndex.MEMTOTAL_VALUE])
+                        except ValueError:
+                            pass
+                    break
+    except (FileNotFoundError, PermissionError):
+        pass
+    return mem_total
+
+def _read_proc_rss(pid: int) -> int:
+    """
+    Helper: 
+    Reads the resident set size (RSS) in KB of a process from /proc/<pid>/statm.
+    RSS is the process's memory that is held in RAM, not including swapped-out pages.
+
+    Returns:
+        int: RSS in KB, or 0 if process does not exist or cannot be read. 
+    """
+
+    res_kb = 0
+    statm_path = f"/proc/{pid}/statm"
+    try:
+        with open(statm_path, "r") as f:
+            fields = f.read().split()
+            if len(fields) > ProcStatmIndex.RSS:
+                try:
+                    page_size = os.sysconf("SC_PAGESIZE") // ProcStatmIndex.BYTES_TO_KB
+                    rss_pages = int(fields[ProcStatmIndex.RSS])
+                    rss_kb = rss_pages * page_size
+                except (ValueError, AttributeError):
+                    pass
+    except (FileNotFoundError, PermissionError):
+        pass
+    return rss_kb
+
+def get_process_mem_percent(pid: int) -> float:
+    """
+    Returns memory usage percentage of a process.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        float: Memory usage percent (0.0 - 100.0)
+    """
+    rss = _read_proc_rss(pid)
+    mem_total = _read_meminfo_total()
+
+    if mem_total <= MemInfoIndex.MEM_INVALID:
+        return MemInfoIndex.MEM_INVALID
+
+    mem_percent = (rss / mem_total) * MemInfoIndex.MEM_PERCENT_SCALE
+    return round(mem_percent, MemInfoIndex.MEM_PERCENT_ROUND_DIGITS)

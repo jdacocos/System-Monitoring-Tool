@@ -1,43 +1,23 @@
 """
 process_constants.py
 
-This module defines constants used for parsing the Linux /proc filesystem,
-specifically for accessing fields in /proc/<pid>/stat and /proc/stat.
-The constants are designed to prevent the use of “magic numbers” in code,
-improving readability and maintainability.
+This module defines constants for the System Monitoring Tool.
 
-The module includes:
+Includes:
+- ProcessStateIndex: Index positions of fields in /proc/<pid>/stat
+- PasswdIndex: Index positions of fields in /etc/passwd
+- ProcStatIndex: Index positions for /proc/stat CPU fields
 
-- ProcessStateIndex: Contains indices for fields in /proc/<pid>/stat
-  such as PID, COMM, STATE, UTIME, STIME, etc.
-
-- CpuStatIndex: Contains indices for CPU fields in /proc/stat
-  such as USER, NICE, SYSTEM, IDLE, etc.
-
-Usage Example:
-    from process_constants import ProcessStateIndex, CpuStatIndex
-
-    # Access user and system CPU jiffies for a process
-    utime_index = ProcessStateIndex.UTIME
-    stime_index = ProcessStateIndex.STIME
-
-    # Access total system CPU jiffies
-    user_index = CpuStatIndex.USER
-    system_index = CpuStatIndex.SYSTEM
+These constants help prevent magic numbers and improve code readability.
 """
+
+# pylint: disable=too-few-public-methods
 
 class ProcessStateIndex:
     """
     Constants representing the indices of fields in /proc/<pid>/stat.
     The indices are 0-based.
-
-    Example fields:
-        PID     - Process ID
-        COMM    - Filename of the executable
-        STATE   - Process state (R, S, Z, etc.)
-        UTIME   - CPU time spent in user mode (jiffies)
-        STIME   - CPU time spent in kernel mode (jiffies)
-    """
+     """
 
     PID = 0
     COMM = 1
@@ -56,17 +36,10 @@ class ProcessStateIndex:
     STIME = 14
     # Add more fields as needed
 
-
 class CpuStatIndex:
     """
     Constants representing the indices of CPU fields in /proc/stat.
     These are used to calculate total CPU jiffies for the system.
-
-    Example fields:
-        USER    - Time spent in user mode
-        NICE    - Time spent in user mode with low priority
-        SYSTEM  - Time spent in system mode
-        IDLE    - Time spent idle
     """
 
     USER = 0
@@ -79,20 +52,16 @@ class CpuStatIndex:
     STEAL = 7
     GUEST = 8
     GUEST_NICE = 9
+    # constants for calculating cpu_percent
+    CPU_LABEL_COLUMN = 1
+    CPU_PERCENT_SCALE = 100.0
+    CPU_PERCENT_ROUND_DIGITS = 2
+    CPU_PERCENT_INVALID = 0.0
+    MIN_DELTA_TOTAL = 0
 
 class PasswdIndex:
     """
     Constants representing the 0-based indices of fields in /etc/passwd.
-
-    Fields in each line of /etc/passwd are separated by ':':
-
-        NAME     - Username (login name)
-        PASSWORD - Password placeholder ('x' or encrypted, usually ignored)
-        UID      - User ID
-        GID      - Group ID
-        COMMENT  - Optional comment or full name
-        HOME     - Home directory
-        SHELL    - Login shell
     """
 
     NAME = 0
@@ -102,3 +71,22 @@ class PasswdIndex:
     COMMENT = 4
     HOME = 5
     SHELL = 6
+
+class MemInfoIndex:
+    """
+    Constants representing the 0-based indices of fields in /proc/meminfo.
+    """
+    
+    MEMTOTAL_LABEL = "MemTotal:"
+    MEMTOTAL_VALUE = 1
+    # constants for calculating mem_percent
+    MEM_PERCENT_SCALE = 100.0
+    MEM_PERCENT_ROUND_DIGITS = 2
+    MEM_INVALID = 0.0
+    
+class ProcStatmIndex:
+    """
+    Constants representing the 0-based indices of fields in /proc/<pid>/statm
+    """
+    RSS = 1
+    BYTES_TO_KB = 1024
