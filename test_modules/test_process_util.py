@@ -154,11 +154,34 @@ def test_read_proc_rss():
     assert rss >= 0  # should be 0 or positive
 
 def test_get_process_mem_percent():
-    """Test memory usage percent calculation for a real process"""
+    """
+    Test get_process_mem_percent() with:
+      1. Busy PID (current Python process)
+      2. First PID (usually idle PID 1)
+      3. A few PIDs to check type and range
+    """
     pids = get_process_pids()
+    print(f"Found PIDs: {pids[:10]}...")  # only print first 10 to avoid flooding
     assert pids, "No PIDs found to test memory percent"
-    test_pid = pids[0]
-    
-    mem_percent = get_process_mem_percent(test_pid)
-    print(f"Memory percent for PID {test_pid}: {mem_percent}%")
-    assert 0.0 <= mem_percent <= 100.0  # must be in valid range
+
+    # --- Test 1: Busy PID ---
+    busy_pid = os.getpid()  # PID of this Python process
+    mem_busy = get_process_mem_percent(busy_pid)
+    print(f"Memory percent for busy PID {busy_pid}: {mem_busy}%")
+    assert isinstance(mem_busy, float), "Memory percent should be a float"
+    assert 0.0 <= mem_busy <= 100.0, "Memory percent should be between 0 and 100"
+
+    # --- Test 2: First PID (likely idle) ---
+    first_pid = pids[0] if pids else 1
+    mem_first = get_process_mem_percent(first_pid)
+    print(f"Memory percent for first PID {first_pid}: {mem_first}%")
+    assert isinstance(mem_first, float), "Memory percent should be a float"
+    assert 0.0 <= mem_first <= 100.0, "Memory percent should be between 0 and 100"
+
+    # --- Test 3: Loop over a few PIDs ---
+    for pid in pids[:5]:
+        mem = get_process_mem_percent(pid)
+        print(f"PID {pid} Memory: {mem}%")
+        assert isinstance(mem, float), f"Memory percent for PID {pid} should be a float"
+        assert 0.0 <= mem <= 100.0, f"Memory percent for PID {pid} should be between 0 and 100"
+        
