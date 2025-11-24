@@ -21,11 +21,13 @@ def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:
     """
     Open a directory iterator to the /proc file system.
     """
+
+    entries = iter([])
     try:
-        return os.scandir(path)
+        entries = os.scandir(path)
     except FileNotFoundError:
         print(f"Unable to open {path}")
-
+    return entries
 
 def get_process_pids() -> list[int]:
     """
@@ -227,17 +229,16 @@ def _read_meminfo_total() -> int:
         print(f"Error: Permission denied reading {meminfo_path}.")
     return mem_total_kb
 
-def _read_proc_rss(pid: int) -> int:
+def get_process_rss(pid: int) -> int:
     """
-    Helper: 
-    Reads the resident set size (RSS) in KB of a process from /proc/<pid>/statm.
+    Returns the resident set size (RSS) of a process in KB.
     RSS is the portion of a process's memory held in RAM, not including swapped-out pages.
 
     Parameters:
         pid (int): Process ID
 
     Returns:
-        int: RSS in KB, or 0 if the process does not exist or cannot be read. 
+        int: RSS in KB, or 0 if the process does not exist or cannot be read.
     """
     rss_kb = 0
     statm_path = f"/proc/{pid}/statm"
@@ -251,8 +252,8 @@ def _read_proc_rss(pid: int) -> int:
                     rss_pages = int(fields[ProcStatmIndex.RSS])
                     rss_kb = rss_pages * page_size_kb
                 except ValueError:
-                    print(f"Warning: Could not convert RSS value to int"
-                          f"for PID {pid}: {fields[ProcStatmIndex.RSS]}")
+                    print(f"Warning: Could not convert RSS value to int for PID {pid}: "
+                          f"{fields[ProcStatmIndex.RSS]}")
                 except AttributeError:
                     print("Warning: os.sysconf not supported on this system.")
     except FileNotFoundError:
@@ -272,7 +273,7 @@ def get_process_mem_percent(pid: int) -> float:
     Returns:
         float: Memory usage percent (0.0 - 100.0)
     """
-    rss_kb = _read_proc_rss(pid)
+    rss_kb = get_process_rss(pid)
     total_mem_kb = _read_meminfo_total()
 
     # check division by zero or invalid total memory

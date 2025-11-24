@@ -19,8 +19,9 @@ from process_struct import ProcessInfo
 from process_util import (
     open_file_system, get_process_pids, get_process_user,
     get_process_cpu_percent, get_process_mem_percent, get_process_vsz,
+    get_process_rss,
     _uid_to_username, _read_proc_stat_total, _read_proc_pid_time,
-    _read_meminfo_total, _read_proc_rss
+    _read_meminfo_total
     )
 
 def test_open_file_system():
@@ -157,13 +158,13 @@ def test_read_meminfo_total():
     print(f"Total system memory: {total_mem} KB")
     assert total_mem > 0  # should be positive on any system
 
-def test_read_proc_rss():
+def test_get_process_rss():
     """Test reading resident set size for a real process"""
     pids = get_process_pids()
     assert pids, "No PIDs found to test RSS"
     test_pid = pids[0]
     
-    rss = _read_proc_rss(test_pid)
+    rss = get_process_rss(test_pid)
     print(f"RSS for PID {test_pid}: {rss} KB")
     assert rss >= 0  # should be 0 or positive
 
