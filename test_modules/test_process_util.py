@@ -1,6 +1,20 @@
-import pytest
-import os
+"""
+test_process_util.py
 
+This module contains unit tests for the process_util.py module, 
+which provides functions for retrieving process information 
+on a Linux system, including CPU and memory usage percentages, 
+user ownership, and PID listing.
+
+Tests are written using the pytest framework. Each test validates
+that the functions return correct types, expected value ranges, 
+and handle edge cases gracefully.
+
+Requirements:
+    pytest
+"""
+import os
+import pytest
 from process_struct import ProcessInfo
 from process_util import (
     open_file_system, get_process_pids, get_process_user,

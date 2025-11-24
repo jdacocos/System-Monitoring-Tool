@@ -1,3 +1,19 @@
+"""
+test_process_struct.py
+
+This module contains unit tests for the process_struct.py module,
+which defines the ProcessInfo dataclass representing a system process
+with attributes such as user, PID, CPU and memory usage, and command.
+
+Tests verify that the dataclass correctly validates field values,
+handles edge cases, and maintains the expected types and ranges
+for CPU and memory percentages, PID, and other attributes.
+
+Tests are written using the pytest framework.
+
+Requirements:
+    pytest
+"""
 import pytest
 from process_struct import ProcessInfo
 
