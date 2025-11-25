@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # System Monitoring Tool — Process Integration Branch
 
 ## Branch Overview: `process-integration`
@@ -12,3 +13,14 @@ The **`process-integration`** branch focuses on the **process management and int
 This branch serves as the **core of process-related functionality**, allowing the tool to display real-time system information and manage processes efficiently.
 
 ---
+=======
+# System-Monitoring-Tool
+
+note: psutil only used for testing purposes
+
+#### to-do: 
+- coming soon
+
+ #### bugs to fix:
+- nothing found right now
+>>>>>>> frontend-ui
