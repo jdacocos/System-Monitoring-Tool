@@ -2,29 +2,12 @@
 process_struct.py
 
 This module defines the ProcessInfo dataclass, which represents a system process
-with attributes corresponding to the columns of `ps aux`:
+with attributes corresponding to the columns of 'ps aux':
 
     USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND
 
 It is intended for use in system monitoring tools and other process management
 utilities.
-
-Usage Example:
-    from process_struct import ProcessInfo
-
-    p = ProcessInfo(
-        user="root",
-        pid=1234,
-        cpu_percent=0.1,
-        mem_percent=0.5,
-        vsz=1048576,
-        rss=204800,
-        tty="?",
-        stat="S",
-        start="12:34",
-        time="00:01:23",
-        command="/usr/bin/python3"
-    )
 """
 
 from dataclasses import dataclass
@@ -37,17 +20,17 @@ class ProcessInfo:
     Dataclass representing a system process.
 
     Attributes:
-        user (str): Owner of the process.
-        pid (int): Process ID.
-        cpu_percent (float): CPU usage percentage.
-        mem_percent (float): Memory usage percentage.
-        vsz (int): Virtual memory size in KB.
-        rss (int): Resident memory size in KB.
-        tty (str): Terminal associated with the process.
-        stat (str): Process state (e.g., S, R, Z).
-        start (str): Process start time (HH:MM).
-        time (str): Total CPU time used (HH:MM:SS).
-        command (str): Command that launched the process.
+        user (str): USER column in ps aux.
+        pid (int): PID column in ps aux.
+        cpu_percent (float): %CPU column in ps aux.
+        mem_percent (float): %MEM column in ps aux.
+        vsz (int): VSZ column in ps aux (virtual memory size in KB).
+        rss (int): RSS column in ps aux (resident memory size in KB).
+        tty (str): TTY column in ps aux (terminal associated with the process).
+        stat (str): STAT column in ps aux (process state, e.g., S, R, Z).
+        start (str): START column in ps aux (HH:MM, MonDD, or YYYY).
+        time (str): TIME column in ps aux ([[dd-]hh:]mm:ss).
+        command (str): COMMAND column in ps aux (command that launched the process).
     """
 
     user: str

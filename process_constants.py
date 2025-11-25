@@ -38,6 +38,7 @@ class ProcessStateIndex:
     # add more fields as needed
     NICE = 18
     NLWP = 19
+    STARTTIME = 21
     VSZ = 22
     LOCKED = 36
 
@@ -157,3 +158,24 @@ class StatMapIndex:
         "multi_threaded": "l",  # Multi-threaded
         # Add more flags here as needed
     }
+
+
+class UptimeIndex:
+    """
+    Constants representing the indices of fields in /proc/uptime.
+    """
+
+    SYSTEM_UPTIME = 0
+    IDLE_TIME = 1
+
+
+class TimeFormatIndex:
+    """
+    Constants for formatting time values in ps-style columns.
+    """
+
+    DEFAULT_TIME = "0:00"
+    SECONDS_PER_MINUTE = 60
+    SECONDS_PER_HOUR = 3600
+    SECONDS_PER_DAY = 86400
+    HOURS_PER_DAY = 24

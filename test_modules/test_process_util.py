@@ -15,7 +15,9 @@ Requirements:
 """
 
 import os
+import time
 import pytest
+import re
 from process_util import (
     open_file_system,
     get_process_pids,
@@ -26,6 +28,8 @@ from process_util import (
     get_process_rss,
     get_process_tty,
     get_process_stat,
+    get_process_start,
+    get_process_time,
     _uid_to_username,
     _read_proc_stat_total,
     _read_proc_pid_time,
@@ -33,6 +37,7 @@ from process_util import (
     _read_tty_nr_to_name,
     _read_process_stat_fields,
     _interpret_process_state,
+    _interpret_process_start,
 )
 
 
@@ -375,3 +380,83 @@ def test_get_process_stat():
         # Optionally, check allowed characters: letters + typical ps flags
         allowed_chars = set("RSDZTWNI<+s")  # common ps stat letters and flags
         assert all(c in allowed_chars for c in stat_str)
+
+
+def test_get_process_start():
+    """
+    Test get_process_start for two scenarios:
+    1. The first 20 real PIDs on the system.
+    2. A hard-coded PID for a known process (-bash).
+    """
+    # Test #1: First 20 PIDs
+    pids = get_process_pids()
+    if not pids:
+        pytest.skip("No PIDs found on this system to test get_process_start.")
+
+    print("\nTesting first 20 PIDs dynamically:")
+    for pid in sorted(pids)[:20]:
+        start_str = get_process_start(pid)
+        print(f"PID {pid} START: {start_str}")
+
+        assert isinstance(start_str, str)
+        assert len(start_str) > 0
+
+        if "Error" in start_str:
+            continue  # skip unreadable PIDs
+
+        # Validate ps-style START formats: HH:MM or MonDD
+        try:
+            time.strptime(start_str, "%H:%M")
+            continue
+        except ValueError:
+            pass
+
+        try:
+            time.strptime(start_str, "%b%d")
+            continue
+        except ValueError:
+            pass
+
+        pytest.fail(f"PID {pid} START has invalid format: {start_str}")
+
+    # Test #2: Hard-coded PID (-bash)
+    hardcoded_pid = 32335  # replace with actual PID on your system
+    expected_start = "02:03"  # known START value for this PID
+
+    start_str = get_process_start(hardcoded_pid)
+    print(f"\nHardcoded PID {hardcoded_pid} START: {start_str}")
+
+    assert isinstance(start_str, str)
+    assert len(start_str) > 0
+    assert (
+        start_str == expected_start
+    ), f"Expected START {expected_start}, got {start_str}"
+
+
+def test_get_process_time():
+    """
+    Test get_process_time returns a valid TIME string for the first 100 PIDs.
+    Only checks type and reasonable ranges, no regex matching.
+    """
+    pids = get_process_pids()
+    if not pids:
+        pytest.skip("No PIDs found on this system to test get_process_time.")
+
+    for pid in pids[:100]:
+        time_str = get_process_time(pid)
+        print(f"PID {pid} TIME: {time_str}")
+
+        # Validate type
+        assert isinstance(time_str, str), f"PID {pid} TIME is not a string: {time_str}"
+
+        # Basic sanity: split by colon or dash
+        parts = [float(p) for p in time_str.replace("-", ":").split(":")]
+
+        # Seconds must be less than 60
+        assert (
+            0 <= parts[-1] < TimeFormatIndex.SECONDS_PER_MINUTE
+        ), f"PID {pid} seconds out of range: {parts[-1]}"
+
+        # Minutes and hours non-negative
+        for val in parts[:-1]:
+            assert val >= 0, f"PID {pid} negative time value: {val}"

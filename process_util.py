@@ -20,6 +20,8 @@ from process_constants import (
     ProcStatmIndex,
     TTYMapIndex,
     StatMapIndex,
+    UptimeIndex,
+    TimeFormatIndex,
 )
 
 LNX_FS = "/proc"
@@ -469,6 +471,7 @@ def _interpret_process_state(fields: list[str], pid: int) -> str:
 
 def _base_state(fields: list[str]) -> str:
     """
+    Helper:
     Return the main process state character (R, S, D, etc.).
     """
     return StatMapIndex.STATE_MAP.get(
@@ -478,6 +481,7 @@ def _base_state(fields: list[str]) -> str:
 
 def _session_leader_flag(fields: list[str], pid: int) -> str:
     """
+    Helper:
     Return 's' if the process is a session leader.
     """
     try:
@@ -492,6 +496,7 @@ def _session_leader_flag(fields: list[str], pid: int) -> str:
 
 def _priority_flags(fields: list[str]) -> str:
     """
+    Helper:
     Return '<' or 'N' if process is high or low priority according to nice value.
     """
     flags_str = ""
@@ -508,6 +513,7 @@ def _priority_flags(fields: list[str]) -> str:
 
 def _multi_threaded_flag(fields: list[str]) -> str:
     """
+    Helper:
     Return 'l' if the process has more than 1 thread.
     """
 
@@ -524,6 +530,7 @@ def _multi_threaded_flag(fields: list[str]) -> str:
 
 def _locked_flag(fields: list[str]) -> str:
     """
+    Helper:
     Return 'L' if the process has locked memory pages.
     """
 
@@ -550,3 +557,135 @@ def get_process_stat(pid: int) -> str:
     """
     fields = _read_process_stat_fields(pid)
     return _interpret_process_state(fields, pid)
+
+
+def _interpret_process_start(fields: list[str], pid: int) -> str:
+    """
+    Helper:
+    Converts the starttime field from /proc/[pid]/stat into ps-style START column string.
+
+    Parameters:
+        fields (list[str]): Fields from /proc/[pid]/stat
+        pid (int): Process ID
+
+    Returns:
+        str: START column string ('HH:MM', 'MonDD', 'YYYY') or error message
+    """
+    try:
+        start_time_seconds = _read_process_start_epoch(fields)
+        return _format_start_column(start_time_seconds)
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def _read_process_start_epoch(fields: list[str]) -> float:
+    """
+    Helper:
+    Calculates the process start time in epoch seconds.
+
+    Parameters:
+        fields (list[str]): Fields from /proc/[pid]/stat
+
+    Returns:
+        float: Epoch seconds of process start time
+    """
+    uptime_path = "/proc/uptime"
+
+    if not fields or len(fields) <= ProcessStateIndex.STARTTIME:
+        raise ValueError("Invalid stat fields, cannot read STARTTIME")
+
+    start_ticks = int(fields[ProcessStateIndex.STARTTIME])
+    clock_ticks = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
+
+    with open(uptime_path, RD_ONLY, encoding=UTF_8) as f:
+        uptime_fields = f.read().split()
+        uptime_seconds = float(uptime_fields[UptimeIndex.SYSTEM_UPTIME])
+
+    now_seconds = time.time()
+    start_time_seconds = now_seconds - (uptime_seconds - start_ticks / clock_ticks)
+    return start_time_seconds
+
+
+def _format_start_column(start_time_seconds: float) -> str:
+    """
+    Formats epoch seconds into a ps aux START column string.
+
+    Parameters:
+        start_time_seconds (float): Epoch seconds of process start time
+
+    Returns:
+        str: START column string ('HH:MM', 'MonDD', 'YYYY')
+    """
+    start_tm = time.localtime(start_time_seconds)
+    now_tm = time.localtime(time.time())
+
+    if (start_tm.tm_year == now_tm.tm_year) and (start_tm.tm_yday == now_tm.tm_yday):
+        # Started today → HH:MM
+        return time.strftime("%H:%M", start_tm)
+    elif start_tm.tm_year == now_tm.tm_year:
+        # Started this year → MonDD
+        return time.strftime("%b%d", start_tm)
+    else:
+        # Started previous year → YYYY
+        return str(start_tm.tm_year)
+
+
+def get_process_start(pid: int) -> str:
+    """
+    Returns the process start time formatted like the 'START' column in ps aux.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        str: Start time as 'HH:MM', 'MonDD', or 'YYYY', or error message if unavailable
+    """
+    fields = _read_process_stat_fields(pid)
+    return _interpret_process_start(fields, pid)
+
+
+def _format_time_column(total_seconds: int) -> str:
+    """
+    Helper:
+    Convert total CPU time in seconds into ps aux TIME format:
+        - M:SS for <1 hour
+        - H:MM:SS for >=1 hour
+        - D-HH:MM:SS for >=1 day
+    """
+    SECONDS_PER_MINUTE = TimeFormatIndex.SECONDS_PER_MINUTE
+    SECONDS_PER_HOUR = TimeFormatIndex.SECONDS_PER_HOUR
+    SECONDS_PER_DAY = TimeFormatIndex.SECONDS_PER_DAY
+
+    days = total_seconds // SECONDS_PER_DAY
+    remainder = total_seconds % SECONDS_PER_DAY
+
+    hours = remainder // SECONDS_PER_HOUR
+    remainder %= SECONDS_PER_HOUR
+
+    minutes = remainder // SECONDS_PER_MINUTE
+    seconds = remainder % SECONDS_PER_MINUTE
+
+    if days > 0:
+        return f"{days}-{hours:02}:{minutes:02}:{seconds:02}"
+    elif hours > 0:
+        return f"{hours}:{minutes:02}:{seconds:02}"
+    else:
+        return f"{minutes}:{seconds:02}"  # ps aux style: M:SS
+
+
+def get_process_time(pid: int) -> str:
+    """
+    Returns the total CPU time of a process formatted like the TIME column in ps aux.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        str: CPU time as '[[dd-]hh:]mm:ss', or default '0:00' if unreadable
+    """
+    total_jiffies = _read_proc_pid_time(pid)
+    if total_jiffies <= 0:
+        return TimeFormatIndex.DEFAULT_TIME
+
+    total_seconds = total_jiffies / os.sysconf(os.sysconf_names["SC_CLK_TCK"])
+    return _format_time_column(total_seconds)
