@@ -36,8 +36,8 @@ Dependencies:
 
 import os
 import time
+from process_constants import RD_ONLY, UTF_8, ProcessStateIndex, UptimeIndex
 from process_util.stat import _read_process_stat_fields
-from process_constants import LNX_FS, RD_ONLY, UTF_8, ProcessStateIndex, UptimeIndex
 
 
 def _interpret_process_start(fields: list[str], _pid: int) -> str:
@@ -55,7 +55,7 @@ def _interpret_process_start(fields: list[str], _pid: int) -> str:
     try:
         start_time_seconds = _read_process_start_epoch(fields)
         return _format_start_column(start_time_seconds)
-    except Exception as e:
+    except (ValueError, IndexError) as e:
         return f"Error: {e}"
 
 
@@ -101,14 +101,15 @@ def _format_start_column(start_time_seconds: float) -> str:
     now_tm = time.localtime(time.time())
 
     if (start_tm.tm_year == now_tm.tm_year) and (start_tm.tm_yday == now_tm.tm_yday):
-        # Started today → HH:MM
+        # Started today - HH:MM
         return time.strftime("%H:%M", start_tm)
-    elif start_tm.tm_year == now_tm.tm_year:
-        # Started this year → MonDD
+
+    if start_tm.tm_year == now_tm.tm_year:
+        # Started this year - MonDD
         return time.strftime("%b%d", start_tm)
-    else:
-        # Started previous year → YYYY
-        return str(start_tm.tm_year)
+
+    # Started previous year - YYYY
+    return str(start_tm.tm_year)
 
 
 def get_process_start(pid: int) -> str:

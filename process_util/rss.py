@@ -13,9 +13,7 @@ The module only uses standard libraries: os, typing, and built-in file I/O.
 """
 
 import os
-import time
-from typing import Iterator
-from process_constants import LNX_FS, RD_ONLY, UTF_8, MemInfoIndex, ProcStatmIndex
+from process_constants import RD_ONLY, UTF_8, MemInfoIndex, ProcStatmIndex
 
 
 def _read_meminfo_total() -> int:

@@ -17,7 +17,7 @@ Only Python standard library os is used.
 
 import os
 from typing import Iterator
-from process_constants import LNX_FS, RD_ONLY, UTF_8
+from process_constants import LNX_FS
 
 
 def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:

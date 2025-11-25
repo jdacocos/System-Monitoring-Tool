@@ -23,9 +23,8 @@ Notes:
 """
 
 import os
-import time
-from process_util.cpu_percent import _read_proc_pid_time
 from process_constants import TimeFormatIndex
+from process_util.cpu_percent import _read_proc_pid_time
 
 
 def _format_time_column(total_seconds: float) -> str:

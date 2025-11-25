@@ -20,7 +20,6 @@ Requirements:
 """
 
 import os
-import time
 import pytest
 from process_util.pids import get_process_pids
 from process_util.cpu_percent import (

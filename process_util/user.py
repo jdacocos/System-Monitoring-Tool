@@ -14,8 +14,7 @@ The module only uses standard libraries: os, typing.
 """
 
 import os
-from typing import Iterator
-from process_constants import LNX_FS, RD_ONLY, UTF_8, PasswdIndex
+from process_constants import RD_ONLY, UTF_8, PasswdIndex
 
 
 def _uid_to_username(uid: int) -> str | None:

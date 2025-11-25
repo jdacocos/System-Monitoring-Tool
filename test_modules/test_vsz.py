@@ -19,7 +19,6 @@ Requirements:
     pytest
 """
 
-import os
 from process_util.pids import get_process_pids
 from process_util.vsz import get_process_vsz
 

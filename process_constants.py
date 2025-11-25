@@ -13,12 +13,11 @@ These constants help prevent magic numbers and improve code readability.
 
 # pylint: disable=too-few-public-methods
 
-"""
-Constants used by the process utility modules to open files.
-"""
+# Constants used by the process utility modules to open files.
 LNX_FS = "/proc"
 RD_ONLY = "r"
 UTF_8 = "utf-8"
+
 
 class ProcessStateIndex:
     """
@@ -162,7 +161,7 @@ class StatMapIndex:
         "low_priority": "N",  # Low priority
         "locked": "L",  # Pages locked in memory
         "multi_threaded": "l",  # Multi-threaded
-        "foregroound": "+",  # Foreground
+        "foreground": "+",  # Foreground
         # Add more flags here as needed
     }
 

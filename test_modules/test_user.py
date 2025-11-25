@@ -15,7 +15,6 @@ Linux-only: Requires access to a mounted /proc filesystem and /etc/passwd file.
 """
 
 import os
-import pytest
 from process_util.pids import get_process_pids
 from process_util.user import _uid_to_username, get_process_user
 

@@ -23,7 +23,8 @@ Requirements:
 """
 
 import os
-from process_constants import LNX_FS, RD_ONLY, UTF_8, ProcessStateIndex, StatMapIndex
+from process_constants import RD_ONLY, UTF_8, ProcessStateIndex, StatMapIndex
+from process_util.tty import _read_tty_nr_to_name
 
 
 def _read_process_stat_fields(pid: int) -> list[str]:
@@ -46,8 +47,8 @@ def _read_process_stat_fields(pid: int) -> list[str]:
         print(f"[ERROR] Process {pid} stat file not found: {stat_path}")
     except PermissionError:
         print(f"[ERROR] Permission denied reading {stat_path}")
-    except Exception as e:
-        print(f"[ERROR] Unexpected error reading {stat_path}: {e}")
+    except OSError as e:
+        print(f"[ERROR] Unexpected OS error reading {stat_path}: {e}")
     return fields
 
 
@@ -170,15 +171,26 @@ def _locked_flag(fields: list[str]) -> str:
 def _foreground_flag(fields: list[str]) -> str:
     """
     Return '+' if the process is in the foreground process group of its terminal.
+    Safely handles processes without TTY or inaccessible TTY.
     """
     try:
         tty_nr = int(fields[ProcessStateIndex.TTY_NR])
         if tty_nr <= 0:
             return ""
-        fg_pgrp = os.stat(f"/proc/{fields[ProcessStateIndex.PID]}").st_pgrp
+
+        tty_name = _read_tty_nr_to_name(tty_nr)
+        tty_path = f"/dev/{tty_name}"
+
+        # Safely open tty; skip if not allowed
+        fd = os.open(tty_path, os.O_RDONLY)
+        try:
+            fg_pgrp = os.tcgetpgrp(fd)
+        finally:
+            os.close(fd)
+
         pgrp = int(fields[ProcessStateIndex.PGRP])
         return StatMapIndex.FLAG_MAP["foreground"] if pgrp == fg_pgrp else ""
-    except Exception:
+    except (OSError, IndexError, ValueError):
         return ""
 
 

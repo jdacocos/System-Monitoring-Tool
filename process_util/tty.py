@@ -17,8 +17,7 @@ Requirements:
     Standard Python libraries only: os, typing
 """
 
-import os
-from process_constants import LNX_FS, RD_ONLY, UTF_8, ProcessStateIndex, TTYMapIndex
+from process_constants import RD_ONLY, UTF_8, ProcessStateIndex, TTYMapIndex
 
 
 def _read_tty_nr_to_name(tty_nr: int) -> str:
@@ -44,7 +43,8 @@ def _read_tty_nr_to_name(tty_nr: int) -> str:
     # Map common major numbers to tty types
     if major == TTYMapIndex.MAJOR_VT:
         return f"tty{minor}"
-    elif major == TTYMapIndex.MAJOR_PTS:
+
+    if major == TTYMapIndex.MAJOR_PTS:
         return f"pts/{minor}"
 
     # Fallback for unknown major numbers

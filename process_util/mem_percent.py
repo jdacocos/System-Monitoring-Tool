@@ -19,9 +19,8 @@ Dependencies:
     - process_util.rss for RSS and total memory readings
 """
 
-import os
-from process_util.rss import get_process_rss, _read_meminfo_total
 from process_constants import MemInfoIndex
+from process_util.rss import get_process_rss, _read_meminfo_total
 
 
 def get_process_mem_percent(pid: int) -> float:

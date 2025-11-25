@@ -20,7 +20,7 @@ Requirements:
     Standard Python libraries only: os
 """
 
-import os
+import pytest
 from process_util.pids import get_process_pids
 from process_util.tty import _read_tty_nr_to_name, get_process_tty
 

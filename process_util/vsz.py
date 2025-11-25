@@ -16,8 +16,7 @@ Usage Example:
     print(f"Process {pid} VSZ: {vsz_kb} KB")
 """
 
-import os
-from process_constants import LNX_FS, RD_ONLY, UTF_8, ProcessStateIndex, ProcStatmIndex
+from process_constants import RD_ONLY, UTF_8, ProcessStateIndex, ProcStatmIndex
 
 
 def get_process_vsz(pid: int) -> int:

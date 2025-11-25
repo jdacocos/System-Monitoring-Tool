@@ -21,10 +21,8 @@ Notes:
       exits, /proc unavailable, or delta too small).
 """
 
-import os
 import time
-from typing import Iterator
-from process_constants import LNX_FS, RD_ONLY, UTF_8, CpuStatIndex, ProcessStateIndex
+from process_constants import RD_ONLY, UTF_8, CpuStatIndex, ProcessStateIndex
 
 
 def _read_proc_stat_total() -> int:
