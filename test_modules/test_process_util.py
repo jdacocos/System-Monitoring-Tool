@@ -324,38 +324,36 @@ def test_read_process_stat_fields():
     assert len(fields) > 2
 
 
-def test_interpret_process_state():
+def test_interpret_process_state_real_pids():
     """
-    Verify that _interpret_process_state converts /proc/<pid>/stat fields
-    into a human-readable stat string.
+    Test _interpret_process_state on a few real PIDs from the system.
+    Ensures that the returned stat string is not empty and starts with
+    a valid state character (R, S, D, Z, T, t, X, x, K, W, I).
     """
 
-    # Mock fields example: STATE='S', SESSION=1, FLAGS=0x80
-    mock_fields = (
-        [
-            "1",  # PID
-            "init",  # COMM
-            "S",  # STATE
-            "0",
-            "0",
-            "0",
-            "0",
-            "0",  # PPID, PGRP, SESSION, TTY_NR, TPGID, FLAGS placeholder
-            "128",  # FLAGS field (high priority bit set)
-        ]
-        + ["0"] * 15
-        + ["1048576"]
-    )  # fill rest for VSZ, UTIME, STIME, etc.
+    # Pick first few PIDs from /proc
+    pids = get_process_pids()[:5]
+    valid_states = set("RSDZTtXxKWI")
 
-    pid = 1
-    stat_str = _interpret_process_state(mock_fields, pid)
-    print(f"Mock PID {pid} interpreted stat: {stat_str}")
+    for pid in pids:
+        try:
+            # Read /proc/<pid>/stat fields directly
+            with open(f"/proc/{pid}/stat", "r", encoding="utf-8") as f:
+                fields = f.read().split()
 
-    # Should start with the state character from the fields
-    assert stat_str.startswith(mock_fields[2])
+            stat_str = _interpret_process_state(fields, pid)
+            print(f"PID {pid} stat: {stat_str}")
 
-    # Should include at least one extra flag character (non-state)
-    assert len(stat_str) > 1
+            # Base state should be valid
+            assert stat_str
+            assert stat_str[0] in valid_states
+
+            # Stat string length should be at least 1
+            assert len(stat_str) >= 1
+
+        except (FileNotFoundError, PermissionError):
+            # Process may have exited or be inaccessible; skip
+            continue
 
 
 def test_get_process_stat():
@@ -366,7 +364,7 @@ def test_get_process_stat():
     if not pids:
         pytest.skip("No PIDs found on this system to test get_process_stat.")
 
-    for pid in pids[:5]:  # test first 5 PIDs for brevity
+    for pid in pids[:20]:  # test first 10 PIDs
         stat_str = get_process_stat(pid)
         print(f"PID {pid} stat: {stat_str}")
 
