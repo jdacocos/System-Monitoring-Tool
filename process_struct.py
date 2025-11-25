@@ -29,6 +29,7 @@ Usage Example:
 
 from dataclasses import dataclass
 
+
 @dataclass
 # pylint: disable=too-many-instance-attributes
 class ProcessInfo:
@@ -48,6 +49,7 @@ class ProcessInfo:
         time (str): Total CPU time used (HH:MM:SS).
         command (str): Command that launched the process.
     """
+
     user: str
     pid: int
     cpu_percent: float

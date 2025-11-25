@@ -13,11 +13,12 @@ These constants help prevent magic numbers and improve code readability.
 
 # pylint: disable=too-few-public-methods
 
+
 class ProcessStateIndex:
     """
     Constants representing the indices of fields in /proc/<pid>/stat.
     The indices are 0-based.
-     """
+    """
 
     PID = 0
     COMM = 1
@@ -34,8 +35,9 @@ class ProcessStateIndex:
     CMAJFLT = 12
     UTIME = 13
     STIME = 14
-    # Add more fields as needed
+    # add more fields as needed
     VSZ = 22
+
 
 class CpuStatIndex:
     """
@@ -60,6 +62,7 @@ class CpuStatIndex:
     CPU_PERCENT_INVALID = 0.0
     MIN_DELTA_TOTAL = 0
 
+
 class PasswdIndex:
     """
     Constants representing the 0-based indices of fields in /etc/passwd.
@@ -73,21 +76,44 @@ class PasswdIndex:
     HOME = 5
     SHELL = 6
 
+
 class MemInfoIndex:
     """
     Constants representing the 0-based indices of fields in /proc/meminfo.
     """
-    
+
     MEMTOTAL_LABEL = "MemTotal:"
     MEMTOTAL_VALUE = 1
     # constants for calculating mem_percent
     MEM_PERCENT_SCALE = 100.0
     MEM_PERCENT_ROUND_DIGITS = 2
     MEM_INVALID = 0.0
-    
+
+
 class ProcStatmIndex:
     """
     Constants representing the 0-based indices of fields in /proc/<pid>/statm
     """
+
     RSS = 1
     BYTES_TO_KB = 1024
+
+
+class TTYMapIndex:
+    """
+    Mapping for numeric tty_nr values to readable TTY names.
+    """
+
+    DEFAULT_TTY: str = "?"
+
+    # Common mappings (add more as needed)
+    MAP = {
+        34816: "pts/0",  # typical bash terminal
+        34817: "pts/1",
+        0x3: "tty1",
+        0x4: "tty2",
+        0x5: "tty3",
+        0x6: "tty4",
+        0x7: "tty5",
+        0x8: "tty6",
+    }

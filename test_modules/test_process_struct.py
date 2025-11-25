@@ -14,11 +14,12 @@ Tests are written using the pytest framework.
 Requirements:
     pytest
 """
+
 import pytest
 from process_struct import ProcessInfo
 
-def test_process_info_creation():
 
+def test_process_info_creation():
     """Test that ProcessInfo can be created and fields are readable."""
 
     p = ProcessInfo(
@@ -32,7 +33,7 @@ def test_process_info_creation():
         stat="S",
         start="12:34",
         time="00:01:23",
-        command="/usr/bin/python3"
+        command="/usr/bin/python3",
     )
 
     # Print each field for verification
@@ -47,7 +48,7 @@ def test_process_info_creation():
     print(f"start: {p.start}")
     print(f"time: {p.time}")
     print(f"command: {p.command}")
-    
+
     assert p.user == "root"
     assert p.pid == 1234
     assert isinstance(p.cpu_percent, float)
@@ -71,7 +72,6 @@ def test_process_info_creation():
 # Expected failure test
 @pytest.mark.xfail(reason="PID should not accept negative numbers yet")
 def test_process_info_invalid_pid():
-
     """This test is expected to fail for now."""
 
     p = ProcessInfo(
@@ -85,7 +85,7 @@ def test_process_info_invalid_pid():
         stat="S",
         start="00:00",
         time="00:00:00",
-        command="invalid"
+        command="invalid",
     )
     assert p.pid > 0  # This will fail, marked as xfail
 
@@ -93,7 +93,6 @@ def test_process_info_invalid_pid():
 # ------------------------------------------------------------
 # Test that an exception is raised
 def test_invalid_cpu_percent():
-
     """CPU percent must be float between 0 and 100."""
 
     with pytest.raises(ValueError):
@@ -108,7 +107,7 @@ def test_invalid_cpu_percent():
             stat="S",
             start="00:00",
             time="00:00:01",
-            command="python"
+            command="python",
         )
 
 
@@ -120,7 +119,7 @@ def test_invalid_cpu_percent():
         ("root", 1),
         ("nobody", 100),
         ("daemon", 2000),
-    ]
+    ],
 )
 def test_multiple_processes(user, pid):
     p = ProcessInfo(
@@ -134,7 +133,7 @@ def test_multiple_processes(user, pid):
         stat="S",
         start="00:00",
         time="00:00:01",
-        command="python"
+        command="python",
     )
 
     print(f"\nTesting ProcessInfo(user={p.user}, pid={p.pid})")

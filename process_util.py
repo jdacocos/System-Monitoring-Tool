@@ -7,15 +7,24 @@ user ownership, and PID listing.
 
 It only uses standard libraries: os, time, and typing.
 """
+
 import os
 import time
 from typing import Iterator
 
 from process_constants import (
-    ProcessStateIndex, CpuStatIndex, PasswdIndex, MemInfoIndex, ProcStatmIndex
-    )
+    ProcessStateIndex,
+    CpuStatIndex,
+    PasswdIndex,
+    MemInfoIndex,
+    ProcStatmIndex,
+    TTYMapIndex,
+)
 
-LNX_FS = '/proc'
+LNX_FS = "/proc"
+RD_ONLY = "r"
+UTF_ENCODING = "utf-8"
+
 
 def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:
     """
@@ -29,6 +38,7 @@ def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:
         print(f"Unable to open {path}")
     return entries
 
+
 def get_process_pids() -> list[int]:
     """
     Retrieves all PIDs from /proc.
@@ -39,6 +49,7 @@ def get_process_pids() -> list[int]:
             if entry.name.isdigit():
                 pids.append(int(entry.name))
     return pids
+
 
 def _uid_to_username(uid: int) -> str | None:
     """
@@ -62,7 +73,9 @@ def _uid_to_username(uid: int) -> str | None:
                 try:
                     entry_uid = int(parts[PasswdIndex.UID])
                 except ValueError:
-                    print(f"Warning: Invalid UID in {passwd_path}: {parts[PasswdIndex.UID]}")
+                    print(
+                        f"Warning: Invalid UID in {passwd_path}: {parts[PasswdIndex.UID]}"
+                    )
                     continue
                 if entry_uid == uid:
                     username = parts[PasswdIndex.NAME]
@@ -70,9 +83,12 @@ def _uid_to_username(uid: int) -> str | None:
     except FileNotFoundError:
         print(f"Error: {passwd_path} not found. Cannot resolve UID {uid}.")
     except PermissionError:
-        print(f"Error: Permission denied while reading {passwd_path}. "
-              f"Cannot resolve UID {uid}.")
+        print(
+            f"Error: Permission denied while reading {passwd_path}. "
+            f"Cannot resolve UID {uid}."
+        )
     return username
+
 
 def get_process_user(pid: int) -> str | None:
     """
@@ -84,7 +100,7 @@ def get_process_user(pid: int) -> str | None:
     Returns:
         str | None: Username if found, otherwise None.
     """
-    
+
     proc_path = f"/proc/{pid}"
     username: str | None = None
 
@@ -95,13 +111,18 @@ def get_process_user(pid: int) -> str | None:
 
         # Convert UID to username
         username = _uid_to_username(process_uid)
-        
+
     except FileNotFoundError:
-        print(f"Error: Process directory {proc_path} not found. PID {pid} may not exist.")
+        print(
+            f"Error: Process directory {proc_path} not found. PID {pid} may not exist."
+        )
     except PermissionError:
-        print(f"Error: Permission denied accessing {proc_path}. "
-              f"Cannot determine owner of PID {pid}.")
+        print(
+            f"Error: Permission denied accessing {proc_path}. "
+            f"Cannot determine owner of PID {pid}."
+        )
     return username
+
 
 def _read_proc_stat_total() -> int:
     """
@@ -120,10 +141,12 @@ def _read_proc_stat_total() -> int:
             first_line = f.readline()
             if first_line.startswith("cpu "):
                 # skip the "cpu" label
-                cpu_fields = first_line.split()[CpuStatIndex.CPU_LABEL_COLUMN:]
+                cpu_fields = first_line.split()[CpuStatIndex.CPU_LABEL_COLUMN :]
 
                 # Sum USER + NICE + SYSTEM + IDLE (indexes defined in CpuStatIndex)
-                total_jiffies = sum(int(cpu_fields[i]) for i in range(CpuStatIndex.IDLE + 1))
+                total_jiffies = sum(
+                    int(cpu_fields[i]) for i in range(CpuStatIndex.IDLE + 1)
+                )
 
     except FileNotFoundError:
         print(f"Error: {stat_path} not found. Cannot read total CPU jiffies.")
@@ -132,6 +155,7 @@ def _read_proc_stat_total() -> int:
     except ValueError:
         print(f"Error: Invalid numeric value found in {stat_path}.")
     return total_jiffies
+
 
 def _read_proc_pid_time(pid: int) -> int:
     """
@@ -167,6 +191,7 @@ def _read_proc_pid_time(pid: int) -> int:
 
     return total_proc_jiffies
 
+
 def get_process_cpu_percent(pid: int, interval: float = 0.1) -> float:
     """
     Calculate the CPU usage percentage of a process over a given interval.
@@ -200,6 +225,7 @@ def get_process_cpu_percent(pid: int, interval: float = 0.1) -> float:
     cpu_percent = (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE
     return round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)
 
+
 def _read_meminfo_total() -> int:
     """
     Helper:
@@ -220,14 +246,17 @@ def _read_meminfo_total() -> int:
                         try:
                             mem_total_kb = int(fields[MemInfoIndex.MEMTOTAL_VALUE])
                         except ValueError:
-                            print(f"Warning: Could not convert MemTotal value "
-                                  f"to int: {fields[MemInfoIndex.MEMTOTAL_VALUE]}")
+                            print(
+                                f"Warning: Could not convert MemTotal value "
+                                f"to int: {fields[MemInfoIndex.MEMTOTAL_VALUE]}"
+                            )
                     break
     except FileNotFoundError:
         print(f"Error: {meminfo_path} not found.")
     except PermissionError:
         print(f"Error: Permission denied reading {meminfo_path}.")
     return mem_total_kb
+
 
 def get_process_rss(pid: int) -> int:
     """
@@ -248,12 +277,16 @@ def get_process_rss(pid: int) -> int:
             fields = statm_file.read().split()
             if len(fields) > ProcStatmIndex.RSS:
                 try:
-                    page_size_kb = os.sysconf("SC_PAGESIZE") // ProcStatmIndex.BYTES_TO_KB
+                    page_size_kb = (
+                        os.sysconf("SC_PAGESIZE") // ProcStatmIndex.BYTES_TO_KB
+                    )
                     rss_pages = int(fields[ProcStatmIndex.RSS])
                     rss_kb = rss_pages * page_size_kb
                 except ValueError:
-                    print(f"Warning: Could not convert RSS value to int for PID {pid}: "
-                          f"{fields[ProcStatmIndex.RSS]}")
+                    print(
+                        f"Warning: Could not convert RSS value to int for PID {pid}: "
+                        f"{fields[ProcStatmIndex.RSS]}"
+                    )
                 except AttributeError:
                     print("Warning: os.sysconf not supported on this system.")
     except FileNotFoundError:
@@ -262,6 +295,7 @@ def get_process_rss(pid: int) -> int:
         print(f"Error: Permission denied reading {statm_path}.")
 
     return rss_kb
+
 
 def get_process_mem_percent(pid: int) -> float:
     """
@@ -283,6 +317,7 @@ def get_process_mem_percent(pid: int) -> float:
 
     mem_percent = (rss_kb / total_mem_kb) * MemInfoIndex.MEM_PERCENT_SCALE
     return round(mem_percent, MemInfoIndex.MEM_PERCENT_ROUND_DIGITS)
+
 
 def get_process_vsz(pid: int) -> int:
     """
@@ -313,3 +348,55 @@ def get_process_vsz(pid: int) -> int:
     except PermissionError:
         print(f"[ERROR] Permission denied when reading {stat_path}")
     return vsz_kb
+
+
+def _read_tty_nr_to_name(tty_nr: int) -> str:
+    """
+    Helper:
+    Convert a numeric tty_nr value into a readable TTY name
+    using the predefined TTY map.
+
+    Parameters:
+        tty_nr (int): TTY number from /proc/<pid>/stat
+
+    Returns:
+        str: TTY name (e.g., 'pts/0', 'tty1') or DEFAULT_TTY if not found
+    """
+    if tty_nr <= 0:
+        return TTYMapIndex.DEFAULT_TTY
+
+    return TTYMapIndex.MAP.get(tty_nr, TTYMapIndex.DEFAULT_TTY)
+
+
+def get_process_tty(pid: int) -> str:
+    """
+    Returns the readable TTY name for a given process.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        str: TTY name (e.g., 'pts/0', 'tty1') or DEFAULT_TTY if unavailable
+    """
+    tty_name = TTYMapIndex.DEFAULT_TTY
+    stat_path = f"/proc/{pid}/stat"
+
+    try:
+        with open(stat_path, "r", encoding="utf-8") as stat_file:
+            fields = stat_file.read().split()
+            if len(fields) > ProcessStateIndex.TTY_NR:
+                try:
+                    tty_nr = int(fields[ProcessStateIndex.TTY_NR])
+                    tty_name = _read_tty_nr_to_name(tty_nr)
+                except ValueError:
+                    print(
+                        f"[WARN] Invalid TTY_NR value for PID {pid}: {fields[ProcessStateIndex.TTY_NR]}"
+                    )
+            else:
+                print(f"[WARN] Not enough fields in {stat_path} to read TTY_NR")
+    except FileNotFoundError:
+        print(f"[ERROR] Process {pid} stat file not found: {stat_path}")
+    except PermissionError:
+        print(f"[ERROR] Permission denied reading {stat_path}")
+
+    return tty_name

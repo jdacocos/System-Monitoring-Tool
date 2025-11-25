@@ -1,28 +1,37 @@
 """
 test_process_util.py
 
-This module contains unit tests for the process_util.py module, 
-which provides functions for retrieving process information 
-on a Linux system, including CPU and memory usage percentages, 
+This module contains unit tests for the process_util.py module,
+which provides functions for retrieving process information
+on a Linux system, including CPU and memory usage percentages,
 user ownership, and PID listing.
 
 Tests are written using the pytest framework. Each test validates
-that the functions return correct types, expected value ranges, 
+that the functions return correct types, expected value ranges,
 and handle edge cases gracefully.
 
 Requirements:
     pytest
 """
+
 import os
 import pytest
-from process_struct import ProcessInfo
 from process_util import (
-    open_file_system, get_process_pids, get_process_user,
-    get_process_cpu_percent, get_process_mem_percent, get_process_vsz,
+    open_file_system,
+    get_process_pids,
+    get_process_user,
+    get_process_cpu_percent,
+    get_process_mem_percent,
+    get_process_vsz,
     get_process_rss,
-    _uid_to_username, _read_proc_stat_total, _read_proc_pid_time,
-    _read_meminfo_total
-    )
+    get_process_tty,
+    _uid_to_username,
+    _read_proc_stat_total,
+    _read_proc_pid_time,
+    _read_meminfo_total,
+    _read_tty_nr_to_name,
+)
+
 
 def test_open_file_system():
     """
@@ -44,7 +53,8 @@ def test_open_file_system():
     print(f"\n Print all contents of /proc:\n")
     for fs in entries:
         print(fs.name)
-    
+
+
 def test_get_process_pids():
     """
     Tests that all the pids are successfully retrieved from /proc.
@@ -65,17 +75,19 @@ def test_get_process_pids():
     current_pid = os.getpid()
     assert current_pid in pids
 
+
 def test_uid_to_username():
     """
     Tests that all uids are correctly converted to appropriate str usernames.
     """
-    
+
     uid = os.getuid()
     username = _uid_to_username(uid)
     print(f"Current UID {uid} corresponds to user: {username}")
     assert username is not None
     assert isinstance(username, str)
-    
+
+
 def test_get_process_user():
     """
     Tests that it retrieves username associated with the processes.
@@ -91,10 +103,11 @@ def test_get_process_user():
         user = get_process_user(pid)
         if user is not None:
             print(f"PID: {pid}, User: {user}")
-    
+
     assert user is not None
     assert isinstance(user, str)
     assert len(user) > 0
+
 
 def test_read_proc_stat_total():
     """
@@ -119,6 +132,7 @@ def test_read_proc_pid_time():
     print(f"PID {pid} total jiffies: {jiffies}")
     assert isinstance(jiffies, int)
     assert jiffies >= 0
+
 
 def test_get_process_cpu_percent():
     """
@@ -150,7 +164,10 @@ def test_get_process_cpu_percent():
         cpu = get_process_cpu_percent(pid, interval=0.5)
         print(f"PID {pid} CPU: {cpu}%")
         assert isinstance(cpu, float), f"CPU percent for PID {pid} should be a float"
-        assert 0.0 <= cpu <= 100.0, f"CPU percent for PID {pid} should be between 0 and 100"
+        assert (
+            0.0 <= cpu <= 100.0
+        ), f"CPU percent for PID {pid} should be between 0 and 100"
+
 
 def test_read_meminfo_total():
     """Test reading total system memory from /proc/meminfo"""
@@ -158,15 +175,17 @@ def test_read_meminfo_total():
     print(f"Total system memory: {total_mem} KB")
     assert total_mem > 0  # should be positive on any system
 
+
 def test_get_process_rss():
     """Test reading resident set size for a real process"""
     pids = get_process_pids()
     assert pids, "No PIDs found to test RSS"
     test_pid = pids[0]
-    
+
     rss = get_process_rss(test_pid)
     print(f"RSS for PID {test_pid}: {rss} KB")
     assert rss >= 0  # should be 0 or positive
+
 
 def test_get_process_mem_percent():
     """
@@ -198,8 +217,11 @@ def test_get_process_mem_percent():
         mem = get_process_mem_percent(pid)
         print(f"PID {pid} Memory: {mem}%")
         assert isinstance(mem, float), f"Memory percent for PID {pid} should be a float"
-        assert 0.0 <= mem <= 100.0, f"Memory percent for PID {pid} should be between 0 and 100"
-        
+        assert (
+            0.0 <= mem <= 100.0
+        ), f"Memory percent for PID {pid} should be between 0 and 100"
+
+
 def test_get_process_vsz():
     """
     Test get_process_vsz() with:
@@ -231,3 +253,54 @@ def test_get_process_vsz():
         print(f"PID {pid} VSZ: {vsz} KB")
         assert isinstance(vsz, int), f"VSZ for PID {pid} should be an integer"
         assert vsz >= 0, f"VSZ for PID {pid} must be non-negative"
+
+
+def test_read_tty_nr_to_name():
+    """
+    Test the helper function _read_tty_nr_to_name().
+    Checks for invalid and zero TTY numbers and ensures the return type is string.
+    """
+    # Invalid TTY number
+    invalid_tty_nr = -1
+    tty_name = _read_tty_nr_to_name(invalid_tty_nr)
+    print(f"TTY name for invalid TTY nr {invalid_tty_nr}: {tty_name}")
+    assert tty_name == "?", "Should return '?' for invalid TTY numbers"
+
+    # Zero TTY number
+    zero_tty_nr = 0
+    tty_name = _read_tty_nr_to_name(zero_tty_nr)
+    print(f"TTY name for zero TTY nr {zero_tty_nr}: {tty_name}")
+    assert tty_name == "?", "Should return '?' for TTY number 0"
+
+
+def test_get_process_tty():
+    """
+    Test get_process_tty() for deterministic TTYs.
+    """
+
+    # Test 1: Current Python process TTY
+    current_pid = os.getpid()
+    tty_current = get_process_tty(current_pid)
+    print(f"Current PID {current_pid}: TTY = {tty_current}")
+    assert isinstance(tty_current, str)
+    assert tty_current != ""
+
+    # Test 2: Parent shell process
+    parent_pid = os.getppid()
+    tty_parent = get_process_tty(parent_pid)
+    print(f"Parent PID {parent_pid}: TTY = {tty_parent}")
+    assert isinstance(tty_parent, str)
+    assert tty_parent != ""
+
+    # Test 3: Invalid PID
+    invalid_tty = get_process_tty(999999)
+    print(f"Invalid PID 999999: TTY = {invalid_tty}")
+    assert invalid_tty == "?"
+
+    # Test 4: PID 32335 (-bash)
+    bash_pid = 32335
+    tty = get_process_tty(bash_pid)
+    print(f"PID {bash_pid}: TTY = {tty}")
+
+    assert isinstance(tty, str), "TTY should be a string"
+    assert tty == "pts/0", f"Expected 'pts/0' for PID {bash_pid}, got '{tty}'"
