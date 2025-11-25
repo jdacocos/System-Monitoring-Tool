@@ -36,7 +36,9 @@ class ProcessStateIndex:
     UTIME = 13
     STIME = 14
     # add more fields as needed
+    NLWP = 19
     VSZ = 22
+    LOCKED = 36
 
 
 class CpuStatIndex:

@@ -432,39 +432,79 @@ def _read_process_stat_fields(pid: int) -> list[str]:
 
 def _interpret_process_state(fields: list[str], pid: int) -> str:
     """
-    Helper:
-    Converts /proc/<pid>/stat fields into a readable process stat string.
+    Converts /proc/<pid>/stat fields into a human-readable process stat string.
 
     Parameters:
         fields (list[str]): Fields from /proc/<pid>/stat
         pid (int): Process ID
 
     Returns:
-        str: Human-readable stat string (e.g., 'Ss') or DEFAULT_STAT
+        str: Human-readable stat string (e.g., 'Ss<lL') or DEFAULT_STAT
     """
     unknown_stat: str = StatMapIndex.DEFAULT_STAT
+
     if len(fields) <= ProcessStateIndex.STATE:
         print("[WARN] Not enough fields to read process state")
         return unknown_stat
 
-    stat_str = StatMapIndex.STATE_MAP.get(fields[ProcessStateIndex.STATE], unknown_stat)
+    stat_str = _base_state(fields)
+    stat_str += _session_leader_flag(fields, pid)
+    stat_str += _priority_flags(fields)
+    stat_str += _multi_threaded_flag(fields)
+    stat_str += _locked_flag(fields)
 
-    # Add session leader flag
+    return stat_str
+
+
+def _base_state(fields: list[str]) -> str:
+    """Return the main process state character (R, S, D, etc.)."""
+    return StatMapIndex.STATE_MAP.get(
+        fields[ProcessStateIndex.STATE], StatMapIndex.DEFAULT_STAT
+    )
+
+
+def _session_leader_flag(fields: list[str], pid: int) -> str:
+    """Return 's' if the process is a session leader."""
     try:
-        if int(fields[ProcessStateIndex.SESSION]) == pid:
-            stat_str += StatMapIndex.FLAG_MAP["session_leader"]
+        return (
+            StatMapIndex.FLAG_MAP["session_leader"]
+            if int(fields[ProcessStateIndex.SESSION]) == pid
+            else ""
+        )
     except (ValueError, IndexError):
-        print(f"[WARN] Could not read session info for PID {pid}")
+        return ""
 
-    # Add high priority flag
+
+def _priority_flags(fields: list[str]) -> str:
+    """Return '<' or 'N' if process is high or low priority."""
+    flags_str = ""
     try:
         flags = int(fields[ProcessStateIndex.FLAGS])
         if flags & 0x80:
-            stat_str += StatMapIndex.FLAG_MAP["high_priority"]
+            flags_str += StatMapIndex.FLAG_MAP["high_priority"]
+        if flags & 0x40:
+            flags_str += StatMapIndex.FLAG_MAP["low_priority"]
     except (ValueError, IndexError):
-        print(f"[WARN] Could not read process flags for PID {pid}")
+        pass
+    return flags_str
 
-    return stat_str
+
+def _multi_threaded_flag(fields: list[str]) -> str:
+    """Return 'l' if the process has more than 1 thread."""
+    try:
+        nthreads = int(fields[ProcessStateIndex.NLWP])
+        return StatMapIndex.FLAG_MAP["multi_threaded"] if nthreads > 1 else ""
+    except (ValueError, IndexError):
+        return ""
+
+
+def _locked_flag(fields: list[str]) -> str:
+    """Return 'L' if the process has locked memory pages."""
+    try:
+        locked = int(fields[ProcessStateIndex.LOCKED])
+        return StatMapIndex.FLAG_MAP["locked"] if locked > 0 else ""
+    except (ValueError, IndexError):
+        return ""
 
 
 def get_process_stat(pid: int) -> str:
