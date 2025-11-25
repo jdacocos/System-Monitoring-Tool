@@ -36,6 +36,7 @@ class ProcessStateIndex:
     UTIME = 13
     STIME = 14
     # add more fields as needed
+    NICE = 18
     NLWP = 19
     VSZ = 22
     LOCKED = 36
@@ -106,7 +107,7 @@ class TTYMapIndex:
     Mapping for numeric tty_nr values to readable TTY names.
     """
 
-    DEFAULT_TTY: str = "?"
+    DEFAULT_TTY = "?"
 
     # Common mappings (add more as needed)
     MAP = {
@@ -128,6 +129,9 @@ class StatMapIndex:
     """
 
     DEFAULT_STAT = "?"
+    DEFAULT_PRIORITY = 0
+    MULTHREAD_THRESH = 1
+    LOCKED_THRESH = 0
 
     # Main process states (kernel codes)
     STATE_MAP = {
