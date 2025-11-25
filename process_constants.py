@@ -117,3 +117,37 @@ class TTYMapIndex:
         0x7: "tty5",
         0x8: "tty6",
     }
+
+
+class StatMapIndex:
+    """
+    Maps numeric flags and kernel process states from /proc/<pid>/stat
+    to the extended process state strings as seen in 'ps aux'.
+    """
+
+    DEFAULT_STAT = "?"
+
+    # Main process states (kernel codes)
+    STATE_MAP = {
+        "R": "R",  # Running
+        "S": "S",  # Sleeping
+        "D": "D",  # Uninterruptible sleep
+        "Z": "Z",  # Zombie
+        "T": "T",  # Stopped
+        "t": "t",  # Tracing stop
+        "X": "X",  # Dead
+        "x": "x",  # Dead (should not appear normally)
+        "K": "K",  # Wakekill
+        "W": "W",  # Waking
+        "I": "I",  # Idle kernel thread
+    }
+
+    # Additional flag-based extensions
+    FLAG_MAP = {
+        "session_leader": "s",  # Process is session leader
+        "high_priority": "<",  # High priority
+        "low_priority": "N",  # Low priority
+        "locked": "L",  # Pages locked in memory
+        "multi_threaded": "l",  # Multi-threaded
+        # Add more flags here as needed
+    }

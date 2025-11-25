@@ -1,5 +1,5 @@
 #!/bin/bash
-# Exit if any command fails
+# Exit immediately if any command fails
 set -e
 
 echo "=============================="
@@ -13,12 +13,11 @@ echo "=============================="
 pylint $(find . -name "*.py") || true
 
 echo "=============================="
-echo "Running Pytest..."
+echo "Running Pytest (normal output)..."
 echo "=============================="
+pytest
 
-# If no arguments provided, run with -s
-if [ $# -eq 0 ]; then
-    pytest -s
-else
-    pytest "$@"
-fi
+echo "=============================="
+echo "Running Pytest with -s (show print statements)..."
+echo "=============================="
+pytest -s

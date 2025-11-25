@@ -19,6 +19,7 @@ from process_constants import (
     MemInfoIndex,
     ProcStatmIndex,
     TTYMapIndex,
+    StatMapIndex,
 )
 
 LNX_FS = "/proc"
@@ -61,6 +62,7 @@ def _uid_to_username(uid: int) -> str | None:
     Returns:
         str | None: Username if found, otherwise None.
     """
+
     username = None
     passwd_path = "/etc/passwd"
 
@@ -401,3 +403,79 @@ def get_process_tty(pid: int) -> str:
         print(f"[ERROR] Permission denied reading {stat_path}")
 
     return tty_name
+
+
+def _read_process_stat_fields(pid: int) -> list[str]:
+    """
+    Helper:
+    Reads and splits the contents of /proc/<pid>/stat into fields.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        list[str]: List of fields from /proc/<pid>/stat, or empty list on error
+    """
+    stat_path = f"/proc/{pid}/stat"
+    fields: list[str] = []
+    try:
+        with open(stat_path, RD_ONLY, encoding=UTF_8) as f:
+            fields = f.read().split()
+    except FileNotFoundError:
+        print(f"[ERROR] Process {pid} stat file not found: {stat_path}")
+    except PermissionError:
+        print(f"[ERROR] Permission denied reading {stat_path}")
+    except Exception as e:
+        print(f"[ERROR] Unexpected error reading {stat_path}: {e}")
+    return fields
+
+
+def _interpret_process_state(fields: list[str], pid: int) -> str:
+    """
+    Helper:
+    Converts /proc/<pid>/stat fields into a readable process stat string.
+
+    Parameters:
+        fields (list[str]): Fields from /proc/<pid>/stat
+        pid (int): Process ID
+
+    Returns:
+        str: Human-readable stat string (e.g., 'Ss') or DEFAULT_STAT
+    """
+    unknown_stat: str = StatMapIndex.DEFAULT_STAT
+    if len(fields) <= ProcessStateIndex.STATE:
+        print("[WARN] Not enough fields to read process state")
+        return unknown_stat
+
+    stat_str = StatMapIndex.STATE_MAP.get(fields[ProcessStateIndex.STATE], unknown_stat)
+
+    # Add session leader flag
+    try:
+        if int(fields[ProcessStateIndex.SESSION]) == pid:
+            stat_str += StatMapIndex.FLAG_MAP["session_leader"]
+    except (ValueError, IndexError):
+        print(f"[WARN] Could not read session info for PID {pid}")
+
+    # Add high priority flag
+    try:
+        flags = int(fields[ProcessStateIndex.FLAGS])
+        if flags & 0x80:
+            stat_str += StatMapIndex.FLAG_MAP["high_priority"]
+    except (ValueError, IndexError):
+        print(f"[WARN] Could not read process flags for PID {pid}")
+
+    return stat_str
+
+
+def get_process_stat(pid: int) -> str:
+    """
+    Returns the human-readable process stat string for a given PID.
+
+    Parameters:
+        pid (int): Process ID
+
+    Returns:
+        str: Process stat string (e.g., 'Ss') or DEFAULT_STAT if unavailable
+    """
+    fields = _read_process_stat_fields(pid)
+    return _interpret_process_state(fields, pid)
