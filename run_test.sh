@@ -21,6 +21,19 @@ else
 fi
 
 # ---------------------------
+# Autoflake: remove unused imports & variables
+# ---------------------------
+echo "=============================="
+echo "Running Autoflake to remove unused imports/variables..."
+echo "=============================="
+if [ -d "$TARGET" ]; then
+    PY_FILES=$(find "$TARGET" -name "*.py")
+else
+    PY_FILES="$TARGET"
+fi
+autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive $PY_FILES
+
+# ---------------------------
 # Black formatting
 # ---------------------------
 echo "=============================="
