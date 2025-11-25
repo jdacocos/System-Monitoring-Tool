@@ -13,6 +13,12 @@ These constants help prevent magic numbers and improve code readability.
 
 # pylint: disable=too-few-public-methods
 
+"""
+Constants used by the process utility modules to open files.
+"""
+LNX_FS = "/proc"
+RD_ONLY = "r"
+UTF_8 = "utf-8"
 
 class ProcessStateIndex:
     """
@@ -110,17 +116,17 @@ class TTYMapIndex:
 
     DEFAULT_TTY = "?"
 
-    # Common mappings (add more as needed)
-    MAP = {
-        34816: "pts/0",  # typical bash terminal
-        34817: "pts/1",
-        0x3: "tty1",
-        0x4: "tty2",
-        0x5: "tty3",
-        0x6: "tty4",
-        0x7: "tty5",
-        0x8: "tty6",
-    }
+    # Device major numbers
+    MAJOR_VT = 4  # virtual console (tty1-tty6)
+    MAJOR_PTS = 136  # pseudo-terminal (pts/N)
+
+    # Bit masks and shifts for decoding tty_nr
+    MAJOR_SHIFT = 8
+    MAJOR_MASK = 0xFFF
+
+    MINOR_LOW_MASK = 0xFF
+    MINOR_HIGH_SHIFT = 12
+    MINOR_HIGH_MASK = 0xFFF00
 
 
 class StatMapIndex:
@@ -156,6 +162,7 @@ class StatMapIndex:
         "low_priority": "N",  # Low priority
         "locked": "L",  # Pages locked in memory
         "multi_threaded": "l",  # Multi-threaded
+        "foregroound": "+",  # Foreground
         # Add more flags here as needed
     }
 
