@@ -559,7 +559,7 @@ def get_process_stat(pid: int) -> str:
     return _interpret_process_state(fields, pid)
 
 
-def _interpret_process_start(fields: list[str], pid: int) -> str:
+def _interpret_process_start(fields: list[str], _pid: int) -> str:
     """
     Helper:
     Converts the starttime field from /proc/[pid]/stat into ps-style START column string.
@@ -644,7 +644,7 @@ def get_process_start(pid: int) -> str:
     return _interpret_process_start(fields, pid)
 
 
-def _format_time_column(total_seconds: int) -> str:
+def _format_time_column(total_seconds: float) -> str:
     """
     Helper:
     Convert total CPU time in seconds into ps aux TIME format:
@@ -652,25 +652,22 @@ def _format_time_column(total_seconds: int) -> str:
         - H:MM:SS for >=1 hour
         - D-HH:MM:SS for >=1 day
     """
-    SECONDS_PER_MINUTE = TimeFormatIndex.SECONDS_PER_MINUTE
-    SECONDS_PER_HOUR = TimeFormatIndex.SECONDS_PER_HOUR
-    SECONDS_PER_DAY = TimeFormatIndex.SECONDS_PER_DAY
+    total_seconds = int(total_seconds)
 
-    days = total_seconds // SECONDS_PER_DAY
-    remainder = total_seconds % SECONDS_PER_DAY
+    days = total_seconds // TimeFormatIndex.SECONDS_PER_DAY
+    remainder = total_seconds % TimeFormatIndex.SECONDS_PER_DAY
 
-    hours = remainder // SECONDS_PER_HOUR
-    remainder %= SECONDS_PER_HOUR
+    hours = remainder // TimeFormatIndex.SECONDS_PER_HOUR
+    remainder %= TimeFormatIndex.SECONDS_PER_HOUR
 
-    minutes = remainder // SECONDS_PER_MINUTE
-    seconds = remainder % SECONDS_PER_MINUTE
+    minutes = remainder // TimeFormatIndex.SECONDS_PER_MINUTE
+    seconds = remainder % TimeFormatIndex.SECONDS_PER_MINUTE
 
     if days > 0:
         return f"{days}-{hours:02}:{minutes:02}:{seconds:02}"
-    elif hours > 0:
+    if hours > 0:
         return f"{hours}:{minutes:02}:{seconds:02}"
-    else:
-        return f"{minutes}:{seconds:02}"  # ps aux style: M:SS
+    return f"{minutes}:{seconds:02}"  # M:SS
 
 
 def get_process_time(pid: int) -> str:

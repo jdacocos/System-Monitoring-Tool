@@ -17,7 +17,6 @@ Requirements:
 import os
 import time
 import pytest
-import re
 from process_util import (
     open_file_system,
     get_process_pids,
@@ -37,8 +36,9 @@ from process_util import (
     _read_tty_nr_to_name,
     _read_process_stat_fields,
     _interpret_process_state,
-    _interpret_process_start,
 )
+
+from process_constants import TimeFormatIndex
 
 
 def test_open_file_system():
@@ -436,7 +436,7 @@ def test_get_process_start():
 def test_get_process_time():
     """
     Test get_process_time returns a valid TIME string for the first 100 PIDs.
-    Only checks type and reasonable ranges, no regex matching.
+    Uses TimeFormatIndex constants for sanity checks.
     """
     pids = get_process_pids()
     if not pids:
@@ -449,10 +449,10 @@ def test_get_process_time():
         # Validate type
         assert isinstance(time_str, str), f"PID {pid} TIME is not a string: {time_str}"
 
-        # Basic sanity: split by colon or dash
-        parts = [float(p) for p in time_str.replace("-", ":").split(":")]
+        # Split by colon or dash and convert to integers
+        parts = [int(float(p)) for p in time_str.replace("-", ":").split(":")]
 
-        # Seconds must be less than 60
+        # Seconds must be < 60
         assert (
             0 <= parts[-1] < TimeFormatIndex.SECONDS_PER_MINUTE
         ), f"PID {pid} seconds out of range: {parts[-1]}"
@@ -460,3 +460,38 @@ def test_get_process_time():
         # Minutes and hours non-negative
         for val in parts[:-1]:
             assert val >= 0, f"PID {pid} negative time value: {val}"
+
+        # Optional: sanity check using divmod to reconstruct total seconds
+        total_seconds = 0
+        if len(parts) == 2:  # M:SS
+            total_seconds = parts[0] * TimeFormatIndex.SECONDS_PER_MINUTE + parts[1]
+        elif len(parts) == 3:  # H:MM:SS
+            total_seconds = (
+                parts[0] * TimeFormatIndex.SECONDS_PER_HOUR
+                + parts[1] * TimeFormatIndex.SECONDS_PER_MINUTE
+                + parts[2]
+            )
+        elif len(parts) == 4:  # D-HH:MM:SS
+            total_seconds = (
+                parts[0] * TimeFormatIndex.SECONDS_PER_DAY
+                + parts[1] * TimeFormatIndex.SECONDS_PER_HOUR
+                + parts[2] * TimeFormatIndex.SECONDS_PER_MINUTE
+                + parts[3]
+            )
+
+        days, remainder = divmod(total_seconds, TimeFormatIndex.SECONDS_PER_DAY)
+        hours, remainder = divmod(remainder, TimeFormatIndex.SECONDS_PER_HOUR)
+        minutes, seconds = divmod(remainder, TimeFormatIndex.SECONDS_PER_MINUTE)
+
+        # Verify reconstructed values match the parsed ones
+        if len(parts) == 2:
+            assert parts[0] == minutes and parts[1] == seconds
+        elif len(parts) == 3:
+            assert parts[0] == hours and parts[1] == minutes and parts[2] == seconds
+        elif len(parts) == 4:
+            assert (
+                parts[0] == days
+                and parts[1] == hours
+                and parts[2] == minutes
+                and parts[3] == seconds
+            )
