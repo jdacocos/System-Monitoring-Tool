@@ -50,9 +50,10 @@ def test_open_file_system():
     # Optional: ensure entries have names
     assert all(hasattr(e, "name") for e in entries)
 
-    print(f"\n Print all contents of /proc:\n")
-    for fs in entries:
-        print(fs.name)
+    print("\nAll contents of /proc:")
+    entries = open_file_system()
+    for entry in entries:
+        print(entry.name)
 
 
 def test_get_process_pids():

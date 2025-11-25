@@ -23,7 +23,7 @@ from process_constants import (
 
 LNX_FS = "/proc"
 RD_ONLY = "r"
-UTF_ENCODING = "utf-8"
+UTF_8 = "utf-8"
 
 
 def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:
@@ -65,7 +65,7 @@ def _uid_to_username(uid: int) -> str | None:
     passwd_path = "/etc/passwd"
 
     try:
-        with open(passwd_path, "r") as f:
+        with open(passwd_path, RD_ONLY, encoding=UTF_8) as f:
             for line in f:
                 parts = line.strip().split(":")
                 if len(parts) <= PasswdIndex.UID:
@@ -137,7 +137,7 @@ def _read_proc_stat_total() -> int:
     total_jiffies = 0
 
     try:
-        with open(stat_path, "r") as f:
+        with open(stat_path, RD_ONLY, encoding=UTF_8) as f:
             first_line = f.readline()
             if first_line.startswith("cpu "):
                 # skip the "cpu" label
@@ -173,7 +173,7 @@ def _read_proc_pid_time(pid: int) -> int:
     total_proc_jiffies = 0
 
     try:
-        with open(stat_path, "r") as f:
+        with open(stat_path, RD_ONLY, encoding=UTF_8) as f:
             fields = f.read().split()
 
             # Ensure required fields exist
@@ -238,7 +238,7 @@ def _read_meminfo_total() -> int:
     meminfo_path = "/proc/meminfo"
 
     try:
-        with open(meminfo_path, "r") as meminfo_file:
+        with open(meminfo_path, RD_ONLY, encoding=UTF_8) as meminfo_file:
             for line in meminfo_file:
                 if line.startswith(MemInfoIndex.MEMTOTAL_LABEL):
                     fields = line.split()
@@ -273,7 +273,7 @@ def get_process_rss(pid: int) -> int:
     statm_path = f"/proc/{pid}/statm"
 
     try:
-        with open(statm_path, "r") as statm_file:
+        with open(statm_path, RD_ONLY, encoding=UTF_8) as statm_file:
             fields = statm_file.read().split()
             if len(fields) > ProcStatmIndex.RSS:
                 try:
@@ -333,7 +333,7 @@ def get_process_vsz(pid: int) -> int:
     stat_path = f"/proc/{pid}/stat"
 
     try:
-        with open(stat_path, "r") as f:
+        with open(stat_path, RD_ONLY, encoding=UTF_8) as f:
             fields = f.read().split()
             if len(fields) > ProcessStateIndex.VSZ:
                 try:
@@ -382,7 +382,7 @@ def get_process_tty(pid: int) -> str:
     stat_path = f"/proc/{pid}/stat"
 
     try:
-        with open(stat_path, "r", encoding="utf-8") as stat_file:
+        with open(stat_path, RD_ONLY, encoding=UTF_8) as stat_file:
             fields = stat_file.read().split()
             if len(fields) > ProcessStateIndex.TTY_NR:
                 try:
@@ -390,7 +390,8 @@ def get_process_tty(pid: int) -> str:
                     tty_name = _read_tty_nr_to_name(tty_nr)
                 except ValueError:
                     print(
-                        f"[WARN] Invalid TTY_NR value for PID {pid}: {fields[ProcessStateIndex.TTY_NR]}"
+                        f"[WARN] Invalid TTY_NR value for "
+                        f"PID {pid}: {fields[ProcessStateIndex.TTY_NR]}"
                     )
             else:
                 print(f"[WARN] Not enough fields in {stat_path} to read TTY_NR")

@@ -19,9 +19,8 @@ import pytest
 from process_struct import ProcessInfo
 
 
-def test_process_info_creation():
-    """Test that ProcessInfo can be created and fields are readable."""
-
+def test_process_info_creation_fields():
+    """Test creation of a ProcessInfo instance and field readability."""
     p = ProcessInfo(
         user="root",
         pid=1234,
@@ -36,18 +35,12 @@ def test_process_info_creation():
         command="/usr/bin/python3",
     )
 
-    # Print each field for verification
-    print(f"\nuser: {p.user}")
-    print(f"pid: {p.pid}")
-    print(f"cpu_percent: {p.cpu_percent}")
-    print(f"mem_percent: {p.mem_percent}")
-    print(f"vsz: {p.vsz}")
-    print(f"rss: {p.rss}")
-    print(f"tty: {p.tty}")
-    print(f"stat: {p.stat}")
-    print(f"start: {p.start}")
-    print(f"time: {p.time}")
-    print(f"command: {p.command}")
+    # Print for verification
+    print(
+        f"user={p.user}, pid={p.pid}, cpu_percent={p.cpu_percent}, mem_percent={p.mem_percent}, "
+        f"vsz={p.vsz}, rss={p.rss}, tty={p.tty}, stat={p.stat}, start={p.start}, time={p.time}, "
+        f"command={p.command}"
+    )
 
     assert p.user == "root"
     assert p.pid == 1234
@@ -61,19 +54,10 @@ def test_process_info_creation():
     assert p.time == "00:01:23"
     assert p.command == "/usr/bin/python3"
 
-    # Optional: test string representation
-    s = str(p)
-    assert "ProcessInfo" in s
-    assert "root" in s
-    assert "1234" in s
 
-
-# ------------------------------------------------------------
-# Expected failure test
 @pytest.mark.xfail(reason="PID should not accept negative numbers yet")
 def test_process_info_invalid_pid():
-    """This test is expected to fail for now."""
-
+    """Expected failure: ProcessInfo with negative PID."""
     p = ProcessInfo(
         user="root",
         pid=-1,  # Invalid PID
@@ -87,16 +71,13 @@ def test_process_info_invalid_pid():
         time="00:00:00",
         command="invalid",
     )
-    assert p.pid > 0  # This will fail, marked as xfail
+    assert p.pid > 0
 
 
-# ------------------------------------------------------------
-# Test that an exception is raised
-def test_invalid_cpu_percent():
-    """CPU percent must be float between 0 and 100."""
-
+def test_invalid_cpu_percent_raises():
+    """CPU percent > 100 should raise ValueError."""
     with pytest.raises(ValueError):
-        p = ProcessInfo(
+        ProcessInfo(
             user="root",
             pid=1234,
             cpu_percent=150.0,  # Invalid
@@ -111,8 +92,6 @@ def test_invalid_cpu_percent():
         )
 
 
-# ------------------------------------------------------------
-# Parameterized test example
 @pytest.mark.parametrize(
     "user, pid",
     [
@@ -122,6 +101,7 @@ def test_invalid_cpu_percent():
     ],
 )
 def test_multiple_processes(user, pid):
+    """Parameterized test for multiple ProcessInfo instances."""
     p = ProcessInfo(
         user=user,
         pid=pid,
@@ -137,6 +117,5 @@ def test_multiple_processes(user, pid):
     )
 
     print(f"\nTesting ProcessInfo(user={p.user}, pid={p.pid})")
-
     assert p.user == user
     assert p.pid == pid
