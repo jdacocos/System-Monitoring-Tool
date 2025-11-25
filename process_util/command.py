@@ -18,6 +18,7 @@ Usage Example:
 """
 
 from process_constants import RD_ONLY, UTF_8
+from process_util.stat import _read_process_stat_fields, _base_state
 
 
 def _read_cmdline(pid: int) -> str:
@@ -28,7 +29,7 @@ def _read_cmdline(pid: int) -> str:
 
 
 def _read_comm(pid: int) -> str:
-    """Read /proc/<pid>/comm to get kernel thread name."""
+    """Read /proc/<pid>/comm to get the process name (used for kernel threads)."""
     path = f"/proc/{pid}/comm"
     try:
         with open(path, RD_ONLY, encoding=UTF_8) as f:
@@ -40,25 +41,21 @@ def _read_comm(pid: int) -> str:
 def get_process_command(pid: int) -> str:
     """
     Returns the command line of a process, corresponding to the COMMAND column in `ps aux`.
-
-    Parameters:
-        pid (int): Process ID
-
-    Returns:
-        str: The full command line if available, or a descriptive placeholder:
-            - "[PID not found]" if the process does not exist
-            - "[Permission denied]" if /proc/<pid>/cmdline cannot be read
-            - "[zombie]" if the process is a zombie
-            - "[kthread: <name>]" if the process is a kernel thread (empty cmdline)
     """
     result = "[unknown]"
-
     try:
         cmd = _read_cmdline(pid)
         if cmd:
             result = cmd
         else:
-            result = _classify_empty_cmdline(pid)
+            fields = _read_process_stat_fields(pid)
+            state = _base_state(fields) if fields else "?"
+
+            if state == "Z":
+                result = "[zombie]"
+            elif state in {"I", "K", "R", "S", "D", "T", "t", "X", "x", "W"}:
+                name = _read_comm(pid)
+                result = f"[{name}]"
 
     except FileNotFoundError:
         result = "[PID not found]"
