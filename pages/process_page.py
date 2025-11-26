@@ -8,7 +8,7 @@ from utils.input_helpers import handle_input, GLOBAL_KEYS
 from process import populate_process_list
 from process_struct import ProcessInfo
 
-# Fixed column widths for proper alignment
+# Fixed column widths
 COL_WIDTHS = {
     "user": 16,
     "pid": 6,
@@ -20,7 +20,7 @@ COL_WIDTHS = {
     "stat": 6,
     "start": 8,
     "time": 10,
-    "command": 0,  # dynamic, fills remaining width
+    "command": 0,  # dynamic width
 }
 
 SORT_KEYS = {
@@ -32,7 +32,6 @@ SORT_KEYS = {
 
 
 def get_all_processes(sort_mode: str = "cpu") -> List[ProcessInfo]:
-    """Fetch and return a sorted list of running processes."""
     processes = populate_process_list()
     sort_attr = SORT_KEYS.get(sort_mode, "cpu_percent")
     reverse = sort_attr in ("cpu_percent", "mem_percent")
@@ -49,7 +48,6 @@ def draw_process_list(win: curses.window,
     height, width = win.getmaxyx()
     draw_section_header(win, 1, f"Running Processes (Sort by {sort_mode.upper()})")
 
-    # Header
     header_fmt = (
         f"{{user:<{COL_WIDTHS['user']}}} {{pid:<{COL_WIDTHS['pid']}}} "
         f"{{cpu:>{COL_WIDTHS['cpu']}}} {{mem:>{COL_WIDTHS['mem']}}} "
@@ -72,7 +70,6 @@ def draw_process_list(win: curses.window,
         is_selected = (i == selected_index)
 
         tty_display = (proc.tty or "?")[:COL_WIDTHS['tty'] - 1]
-        # Calculate remaining width for COMMAND dynamically
         used_width = sum(COL_WIDTHS.values())
         command_width = max(10, width - 4 - used_width)
         command_display = (proc.command or "")[:command_width]
@@ -103,9 +100,9 @@ def draw_process_list(win: curses.window,
 
 
 def render_processes(stdscr: curses.window,
-                     nav_items: List[Tuple[str, str, str]],
+                     nav_items: list[tuple[str, str, str]],
                      active_page: str) -> int:
-    """Interactive process viewer displaying all ProcessInfo attributes with proper alignment."""
+    """Interactive process viewer, relies on curses.wrapper for safe cleanup."""
     init_colors()
     curses.curs_set(0)
     stdscr.nodelay(True)
@@ -115,7 +112,7 @@ def render_processes(stdscr: curses.window,
     sort_mode = "cpu"
     refresh_interval = 1.0
     last_refresh = 0.0
-    cached_processes: List[ProcessInfo] = []
+    cached_processes: list[ProcessInfo] = []
     needs_refresh = True
 
     while True:
@@ -146,10 +143,12 @@ def render_processes(stdscr: curses.window,
             time.sleep(0.5)
             continue
 
-        # Clamp selected index
+        # Clamp selected_index before drawing
         selected_index = max(0, min(selected_index, len(processes) - 1))
 
-        visible_lines = content_win.getmaxyx()[0] - 6
+        # Adjust scrolling
+        height, _ = content_win.getmaxyx()
+        visible_lines = height - 6
         if selected_index < scroll_start:
             scroll_start = selected_index
         elif selected_index >= scroll_start + visible_lines:
@@ -161,19 +160,21 @@ def render_processes(stdscr: curses.window,
         stdscr.noutrefresh()
         curses.doupdate()
 
+        # Handle input
         key = stdscr.getch()
         if key == -1:
             time.sleep(0.1)
             continue
-
         # Navigation
         if key == curses.KEY_UP:
             selected_index -= 1
+            selected_index = max(0, selected_index)  # clamp
         elif key == curses.KEY_DOWN:
             selected_index += 1
+            selected_index = min(selected_index, len(processes) - 1)
 
-        # Sorting
-        elif key in (ord('c'), ord('C')):
+        # Sorting (separate if statements, not elif)
+        if key in (ord('c'), ord('C')):
             sort_mode = "cpu"
             needs_refresh = True
         elif key in (ord('m'), ord('M')):
@@ -189,6 +190,7 @@ def render_processes(stdscr: curses.window,
         # Kill selected process
         elif key in (ord('k'), ord('K')):
             try:
+                import os
                 os.kill(processes[selected_index].pid, 9)
                 needs_refresh = True
             except (PermissionError, ProcessLookupError):
