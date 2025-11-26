@@ -1,144 +1,201 @@
-"""
-process_page.py
-
-Curses-based interactive process viewer.
-Displays all running processes with sorting, scrolling, and optional killing.
-Optimized for single-core systems using double buffering and cached process info.
-"""
-
 import curses
 import time
+import os
+from typing import List, Tuple
+
+from utils.ui_helpers import init_colors, draw_content_window, draw_section_header
+from utils.input_helpers import handle_input, GLOBAL_KEYS
 from process import populate_process_list
-from utils.ui_helpers import init_colors
+from process_struct import ProcessInfo
 
-# Threshold for CPU/mem change to trigger re-render
-CPU_CHANGE_THRESHOLD = 0.1
-MEM_CHANGE_THRESHOLD = 0.1
+# Fixed column widths for proper alignment
+COL_WIDTHS = {
+    "user": 16,
+    "pid": 6,
+    "cpu": 6,
+    "mem": 6,
+    "vsz": 10,
+    "rss": 10,
+    "tty": 8,
+    "stat": 6,
+    "start": 8,
+    "time": 10,
+    "command": 0,  # dynamic, fills remaining width
+}
 
-REFRESH_INTERVAL_ACTIVE = 1.0  # active processes
-REFRESH_INTERVAL_IDLE = 5.0  # sleeping or idle processes
+SORT_KEYS = {
+    "cpu": "cpu_percent",
+    "mem": "mem_percent",
+    "pid": "pid",
+    "name": "command",
+}
 
 
-def draw_process_list(pad: curses.window, processes, selected_index, start, sort_mode):
-    """Render the visible slice of processes to the pad."""
-    height, width = pad.getmaxyx()
-    pad.erase()
+def get_all_processes(sort_mode: str = "cpu") -> List[ProcessInfo]:
+    """Fetch and return a sorted list of running processes."""
+    processes = populate_process_list()
+    sort_attr = SORT_KEYS.get(sort_mode, "cpu_percent")
+    reverse = sort_attr in ("cpu_percent", "mem_percent")
+    processes.sort(key=lambda p: getattr(p, sort_attr, 0), reverse=reverse)
+    return processes
+
+
+def draw_process_list(win: curses.window,
+                      processes: List[ProcessInfo],
+                      selected_index: int,
+                      start: int,
+                      sort_mode: str) -> None:
+    """Render a scrollable list of processes with fixed column widths."""
+    height, width = win.getmaxyx()
+    draw_section_header(win, 1, f"Running Processes (Sort by {sort_mode.upper()})")
 
     # Header
-    header = f"{'USER':<10} {'PID':<6} {'%CPU':>5} {'%MEM':>5} {'VSZ':>8} {'RSS':>8} {'TTY':<8} {'STAT':<6} {'START':<6} {'TIME':<8} COMMAND"
-    pad.addstr(0, 0, header)
-    pad.hline(1, 0, curses.ACS_HLINE, width)
-
-    for idx, proc in enumerate(processes[start:], start=start):
-        y = idx - start + 2
-        if y >= height:
-            break
-
-        line = f"{proc.user:<10} {proc.pid:<6} {proc.cpu_percent:>5.1f} {proc.mem_percent:>5.1f} {proc.vsz:>8} {proc.rss:>8} {proc.tty:<8} {proc.stat:<6} {proc.start:<6} {proc.time:<8} {proc.command}"
-
-        if idx == selected_index:
-            pad.attron(curses.color_pair(6))
-            pad.addstr(y, 0, line[:width])
-            pad.attroff(curses.color_pair(6))
-        else:
-            pad.attron(curses.color_pair(5))
-            pad.addstr(y, 0, line[:width])
-            pad.attroff(curses.color_pair(5))
-
-    # Footer help
-    pad.attron(curses.color_pair(2))
-    pad.addstr(
-        height - 1, 0, "[↑/↓] Move   [C]PU  [M]em  [P]ID  [N]ame   [K]ill   [Q]uit"
+    header_fmt = (
+        f"{{user:<{COL_WIDTHS['user']}}} {{pid:<{COL_WIDTHS['pid']}}} "
+        f"{{cpu:>{COL_WIDTHS['cpu']}}} {{mem:>{COL_WIDTHS['mem']}}} "
+        f"{{vsz:>{COL_WIDTHS['vsz']}}} {{rss:>{COL_WIDTHS['rss']}}} "
+        f"{{tty:<{COL_WIDTHS['tty']}}} {{stat:<{COL_WIDTHS['stat']}}} "
+        f"{{start:<{COL_WIDTHS['start']}}} {{time:<{COL_WIDTHS['time']}}} COMMAND"
     )
-    pad.attroff(curses.color_pair(2))
+    win.addstr(2, 2, header_fmt.format(
+        user="USER", pid="PID", cpu="%CPU", mem="%MEM",
+        vsz="VSZ", rss="RSS", tty="TTY", stat="STAT",
+        start="START", time="TIME"
+    ))
+    win.hline(3, 2, curses.ACS_HLINE, width - 4)
+
+    visible_lines = height - 6
+    end = min(start + visible_lines, len(processes))
+
+    for i, proc in enumerate(processes[start:end], start=start):
+        y = 4 + (i - start)
+        is_selected = (i == selected_index)
+
+        tty_display = (proc.tty or "?")[:COL_WIDTHS['tty'] - 1]
+        # Calculate remaining width for COMMAND dynamically
+        used_width = sum(COL_WIDTHS.values())
+        command_width = max(10, width - 4 - used_width)
+        command_display = (proc.command or "")[:command_width]
+
+        line = (
+            f"{proc.user:<{COL_WIDTHS['user']}} "
+            f"{proc.pid:<{COL_WIDTHS['pid']}} "
+            f"{proc.cpu_percent:>{COL_WIDTHS['cpu']}.1f} "
+            f"{proc.mem_percent:>{COL_WIDTHS['mem']}.1f} "
+            f"{proc.vsz:>{COL_WIDTHS['vsz']}} "
+            f"{proc.rss:>{COL_WIDTHS['rss']}} "
+            f"{tty_display:<{COL_WIDTHS['tty']}} "
+            f"{proc.stat:<{COL_WIDTHS['stat']}} "
+            f"{proc.start:<{COL_WIDTHS['start']}} "
+            f"{proc.time:<{COL_WIDTHS['time']}} "
+            f"{command_display}"
+        )
+
+        color_pair = 6 if is_selected else 5
+        win.attron(curses.color_pair(color_pair))
+        win.addstr(y, 2, line[:width])
+        win.attroff(curses.color_pair(color_pair))
+
+    # Footer
+    win.attron(curses.color_pair(2))
+    win.addstr(height - 2, 2, "[↑/↓] Move   [C]PU  [M]em  [P]ID  [N]ame  [K]ill")
+    win.attroff(curses.color_pair(2))
 
 
-def render_processes(stdscr: curses.window, nav_items, active_page):
-    """Interactive process viewer with double buffering, caching, and selective rendering."""
+def render_processes(stdscr: curses.window,
+                     nav_items: List[Tuple[str, str, str]],
+                     active_page: str) -> int:
+    """Interactive process viewer displaying all ProcessInfo attributes with proper alignment."""
     init_colors()
     curses.curs_set(0)
     stdscr.nodelay(True)
 
     selected_index = 0
     scroll_start = 0
-    sort_mode = "cpu_percent"
-
-    cached_processes = populate_process_list()
-    last_rendered_state = {proc.pid: proc.stat for proc in cached_processes}
-    last_refresh_time = time.time()
-
-    # Create pad for double buffering
-    pad_height = max(len(cached_processes) + 5, 100)
-    pad_width = 200
-    pad = curses.newpad(pad_height, pad_width)
+    sort_mode = "cpu"
+    refresh_interval = 1.0
+    last_refresh = 0.0
+    cached_processes: List[ProcessInfo] = []
+    needs_refresh = True
 
     while True:
+        content_win = draw_content_window(
+            stdscr,
+            title="Process Manager",
+            nav_items=nav_items,
+            active_page=active_page,
+        )
+
+        if content_win is None:
+            key = handle_input(stdscr, GLOBAL_KEYS)
+            if key != -1:
+                return key
+            time.sleep(0.1)
+            continue
+
         now = time.time()
-        # Determine refresh interval
-        interval = (
-            REFRESH_INTERVAL_ACTIVE
-            if any(p.stat in ("R", "D") for p in cached_processes)
-            else REFRESH_INTERVAL_IDLE
-        )
+        if needs_refresh or (now - last_refresh) >= refresh_interval or not cached_processes:
+            cached_processes = get_all_processes(sort_mode)
+            last_refresh = now
+            needs_refresh = False
 
-        if now - last_refresh_time >= interval:
-            cached_processes = populate_process_list()
-            last_refresh_time = now
-
-        # Sort processes
-        reverse = sort_mode in ("cpu_percent", "mem_percent")
-        cached_processes.sort(
-            key=lambda p: (
-                getattr(p, sort_mode) if hasattr(p, sort_mode) else getattr(p, "pid")
-            ),
-            reverse=reverse,
-        )
+        processes = cached_processes
+        if not processes:
+            content_win.addstr(2, 2, "No processes found.")
+            content_win.refresh()
+            time.sleep(0.5)
+            continue
 
         # Clamp selected index
-        selected_index = max(0, min(selected_index, len(cached_processes) - 1))
+        selected_index = max(0, min(selected_index, len(processes) - 1))
 
-        # Adjust scrolling
-        height, _ = stdscr.getmaxyx()
-        visible_lines = height - 5
+        visible_lines = content_win.getmaxyx()[0] - 6
         if selected_index < scroll_start:
             scroll_start = selected_index
         elif selected_index >= scroll_start + visible_lines:
             scroll_start = selected_index - visible_lines + 1
 
-        # Draw processes to pad
-        draw_process_list(
-            pad, cached_processes, selected_index, scroll_start, sort_mode
-        )
+        draw_process_list(content_win, processes, selected_index, scroll_start, sort_mode)
 
-        # Refresh visible pad to screen (double buffering)
-        pad.noutrefresh(0, 0, 0, 0, height - 1, pad_width - 1)
+        content_win.noutrefresh()
         stdscr.noutrefresh()
         curses.doupdate()
 
-        # Handle input
         key = stdscr.getch()
         if key == -1:
-            time.sleep(0.05)
+            time.sleep(0.1)
             continue
 
+        # Navigation
         if key == curses.KEY_UP:
             selected_index -= 1
         elif key == curses.KEY_DOWN:
             selected_index += 1
-        elif key in (ord("c"), ord("C")):
-            sort_mode = "cpu_percent"
-        elif key in (ord("m"), ord("M")):
-            sort_mode = "mem_percent"
-        elif key in (ord("p"), ord("P")):
-            sort_mode = "pid"
-        elif key in (ord("n"), ord("N")):
-            sort_mode = "command"
-        elif key in (ord("k"), ord("K")):
-            try:
-                import os
 
-                os.kill(cached_processes[selected_index].pid, 9)
-            except PermissionError:
+        # Sorting
+        elif key in (ord('c'), ord('C')):
+            sort_mode = "cpu"
+            needs_refresh = True
+        elif key in (ord('m'), ord('M')):
+            sort_mode = "mem"
+            needs_refresh = True
+        elif key in (ord('p'), ord('P')):
+            sort_mode = "pid"
+            needs_refresh = True
+        elif key in (ord('n'), ord('N')):
+            sort_mode = "name"
+            needs_refresh = True
+
+        # Kill selected process
+        elif key in (ord('k'), ord('K')):
+            try:
+                os.kill(processes[selected_index].pid, 9)
+                needs_refresh = True
+            except (PermissionError, ProcessLookupError):
                 pass
-        elif key in (ord("q"), ord("Q")):
-            return  # quit
+
+        # Quit or switch pages
+        elif key in (ord('d'), ord('D'), ord('1'), ord('3'), ord('4'), ord('5'), ord('q'), ord('Q')):
+            return key
+
+        time.sleep(0.1)
