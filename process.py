@@ -3,6 +3,8 @@ process.py
 
 This module provides functions to collect process information on a Linux system
 and populate a list of ProcessInfo objects representing all running processes.
+
+It uses cached CPU percentages to optimize performance in single-core environments.
 """
 
 from typing import List
@@ -18,12 +20,10 @@ from process_util.stat import get_process_stat
 from process_util.start import get_process_start
 from process_util.time import get_process_time
 from process_util.command import get_process_command
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
-MAX_WORKERS = 2  # single-core friendly
 
-def _fetch_process(pid: int) -> ProcessInfo:
-    """Fetch a single PID's ProcessInfo, catching exceptions."""
+def _fetch_process(pid: int) -> ProcessInfo | None:
+    """Fetch a single PID's ProcessInfo safely."""
     try:
         return ProcessInfo(
             user=get_process_user(pid),
@@ -41,16 +41,18 @@ def _fetch_process(pid: int) -> ProcessInfo:
     except (OSError, ValueError):
         return None  # skip inaccessible processes
 
+
 def populate_process_list() -> List[ProcessInfo]:
-    """Populate a list of ProcessInfo instances for all running processes using limited concurrency."""
+    """
+    Populate a list of ProcessInfo instances for all running processes
+    using cached CPU percentages (single-core safe).
+    """
     process_list: List[ProcessInfo] = []
     pids = get_process_pids()
 
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        future_to_pid = {executor.submit(_fetch_process, pid): pid for pid in pids}
-        for future in as_completed(future_to_pid):
-            proc_info = future.result()
-            if proc_info is not None:
-                process_list.append(proc_info)
+    for pid in pids:
+        proc_info = _fetch_process(pid)
+        if proc_info is not None:
+            process_list.append(proc_info)
 
     return process_list

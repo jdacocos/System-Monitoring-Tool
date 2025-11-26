@@ -16,13 +16,13 @@ def init_colors() -> None:
     """Initialize the color palette used throughout the application."""
     curses.start_color()
     curses.use_default_colors()
-    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)   # Header / footer
-    curses.init_pair(2, curses.COLOR_CYAN, -1)                   # Accent text
-    curses.init_pair(3, curses.COLOR_GREEN, -1)                  # Healthy metrics
-    curses.init_pair(4, curses.COLOR_RED, -1)                    # Critical metrics
-    curses.init_pair(5, curses.COLOR_WHITE, -1)                  # Default text
+    curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)  # Header / footer
+    curses.init_pair(2, curses.COLOR_CYAN, -1)  # Accent text
+    curses.init_pair(3, curses.COLOR_GREEN, -1)  # Healthy metrics
+    curses.init_pair(4, curses.COLOR_RED, -1)  # Critical metrics
+    curses.init_pair(5, curses.COLOR_WHITE, -1)  # Default text
     curses.init_pair(6, curses.COLOR_BLACK, curses.COLOR_WHITE)  # Active navigation
-    curses.init_pair(7, curses.COLOR_BLUE, -1)                   # Sidebar text
+    curses.init_pair(7, curses.COLOR_BLUE, -1)  # Sidebar text
 
 
 def draw_header(stdscr: curses.window, title: str) -> None:
@@ -36,9 +36,9 @@ def draw_header(stdscr: curses.window, title: str) -> None:
     stdscr.attroff(curses.color_pair(1) | curses.A_BOLD)
 
 
-def draw_sidebar(stdscr: curses.window,
-                 nav_items: Sequence[tuple[str, str, str]],
-                 active_page: str) -> None:
+def draw_sidebar(
+    stdscr: curses.window, nav_items: Sequence[tuple[str, str, str]], active_page: str
+) -> None:
     """Render the navigation sidebar highlighting the active page."""
     height, _ = stdscr.getmaxyx()
     stdscr.attron(curses.color_pair(7))
@@ -64,13 +64,14 @@ def draw_sidebar(stdscr: curses.window,
         stdscr.addch(y, SIDEBAR_WIDTH - 1, curses.ACS_VLINE)
 
 
-def draw_footer(stdscr: curses.window,
-                nav_items: Iterable[tuple[str, str, str]]) -> None:
+def draw_footer(
+    stdscr: curses.window, nav_items: Iterable[tuple[str, str, str]]
+) -> None:
     """Render a footer with contextual key bindings."""
     height, width = stdscr.getmaxyx()
-    instructions = "  ".join(
-        f"[{key}] {label}" for _, label, key in nav_items
-    ) + "  [q] Quit"
+    instructions = (
+        "  ".join(f"[{key}] {label}" for _, label, key in nav_items) + "  [q] Quit"
+    )
 
     stdscr.attron(curses.color_pair(1))
     stdscr.hline(height - 1, 0, " ", width)
@@ -80,9 +81,12 @@ def draw_footer(stdscr: curses.window,
     stdscr.attroff(curses.color_pair(1))
 
 
-def draw_content_window(stdscr: curses.window, title: str,
-                        nav_items: Sequence[tuple[str, str, str]],
-                        active_page: str) -> curses.window | None:
+def draw_content_window(
+    stdscr: curses.window,
+    title: str,
+    nav_items: Sequence[tuple[str, str, str]],
+    active_page: str,
+) -> curses.window | None:
     """
     Draw the base layout consisting of header, sidebar, content area, and footer.
 
@@ -97,9 +101,7 @@ def draw_content_window(stdscr: curses.window, title: str,
             f"(current: {width}x{height})."
         )
         stdscr.addstr(
-            height // 2,
-            max(0, (width - len(msg)) // 2),
-            msg[: max(0, width - 2)]
+            height // 2, max(0, (width - len(msg)) // 2), msg[: max(0, width - 2)]
         )
         stdscr.refresh()
         return None
@@ -124,8 +126,9 @@ def draw_content_window(stdscr: curses.window, title: str,
     return content_win
 
 
-def draw_bar(stdscr: curses.window, y: int, x: int,
-             label: str, value: float, width: int = 34) -> None:
+def draw_bar(
+    stdscr: curses.window, y: int, x: int, label: str, value: float, width: int = 34
+) -> None:
     """Draw a horizontal usage bar inside the given window."""
     value = max(0.0, min(value, 100.0))
     filled = int((value / 100) * width)
@@ -143,11 +146,18 @@ def draw_section_header(stdscr: curses.window, y: int, text: str) -> None:
     stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
 
 
-def draw_sparkline(stdscr: curses.window, y: int, x: int, data: Sequence[float],
-                   width: int, label: str, unit: str = "",
-                   color_pair: int = 2,
-                   fixed_min: float | None = None,
-                   fixed_max: float | None = None) -> None:
+def draw_sparkline(
+    stdscr: curses.window,
+    y: int,
+    x: int,
+    data: Sequence[float],
+    width: int,
+    label: str,
+    unit: str = "",
+    color_pair: int = 2,
+    fixed_min: float | None = None,
+    fixed_max: float | None = None,
+) -> None:
     """Render a simple one-line sparkline graph for recent samples."""
     if not data or width <= 0:
         return

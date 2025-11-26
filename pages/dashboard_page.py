@@ -4,7 +4,13 @@ import platform
 import time
 import psutil
 
-from utils.ui_helpers import (init_colors, draw_content_window, draw_bar, draw_section_header, format_bytes)
+from utils.ui_helpers import (
+    init_colors,
+    draw_content_window,
+    draw_bar,
+    draw_section_header,
+    format_bytes,
+)
 from utils.input_helpers import handle_input, GLOBAL_KEYS
 
 
@@ -19,7 +25,7 @@ def get_system_stats() -> dict:
     return {
         "cpu": psutil.cpu_percent(interval=0.1),
         "mem": psutil.virtual_memory(),
-        "disk": psutil.disk_usage('/'),
+        "disk": psutil.disk_usage("/"),
         "net": psutil.net_io_counters(),
         "uptime": time.time() - psutil.boot_time(),
         "hostname": platform.node(),
@@ -52,7 +58,9 @@ def render_resource_bars(win: curses.window, stats: dict, start_y: int) -> int:
 
     memory = stats["mem"]
     draw_bar(win, y + 3, 2, "Memory", memory.percent)
-    win.addstr(y + 4, 4, f"Used {format_bytes(memory.used)} / {format_bytes(memory.total)}")
+    win.addstr(
+        y + 4, 4, f"Used {format_bytes(memory.used)} / {format_bytes(memory.total)}"
+    )
 
     disk = stats["disk"]
     draw_bar(win, y + 6, 2, "Disk", disk.percent)
@@ -66,8 +74,8 @@ def render_network_info(win: curses.window, net, start_y: int) -> int:
 
     draw_section_header(win, start_y, "Network Activity")
 
-    sent_mb = net.bytes_sent / (1024 ** 2)
-    recv_mb = net.bytes_recv / (1024 ** 2)
+    sent_mb = net.bytes_sent / (1024**2)
+    recv_mb = net.bytes_recv / (1024**2)
     win.addstr(start_y + 1, 2, f"Upload   : {sent_mb:8.1f} MB")
     win.addstr(start_y + 2, 2, f"Download : {recv_mb:8.1f} MB")
 
@@ -94,9 +102,9 @@ def render_system_summary(win: curses.window, stats: dict, start_y: int) -> None
         win.addstr(start_y + i, 2, text[: max(0, width - 4)])
 
 
-def render_dashboard(stdscr: curses.window,
-                     nav_items: list[tuple[str, str, str]],
-                     active_page: str) -> int:
+def render_dashboard(
+    stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
+) -> int:
     """Render the main dashboard with high level system statistics."""
 
     init_colors()

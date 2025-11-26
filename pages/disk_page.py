@@ -17,8 +17,9 @@ READ_HISTORY: deque[float] = deque(maxlen=120)
 WRITE_HISTORY: deque[float] = deque(maxlen=120)
 
 
-def get_disk_stats(previous_io: psutil._common.sdiskio | None,
-                   previous_time: float) -> tuple[dict, psutil._common.sdiskio, float]:
+def get_disk_stats(
+    previous_io: psutil._common.sdiskio | None, previous_time: float
+) -> tuple[dict, psutil._common.sdiskio, float]:
     """Collect disk usage, partition details, and I/O throughput."""
 
     if previous_io is None:
@@ -29,8 +30,10 @@ def get_disk_stats(previous_io: psutil._common.sdiskio | None,
     current_time = time.time()
     elapsed = max(current_time - previous_time, 1e-6)
 
-    read_speed = (current_io.read_bytes - previous_io.read_bytes) / (1024 ** 2) / elapsed
-    write_speed = (current_io.write_bytes - previous_io.write_bytes) / (1024 ** 2) / elapsed
+    read_speed = (current_io.read_bytes - previous_io.read_bytes) / (1024**2) / elapsed
+    write_speed = (
+        (current_io.write_bytes - previous_io.write_bytes) / (1024**2) / elapsed
+    )
 
     partitions: list[dict] = []
     for partition in psutil.disk_partitions():
@@ -38,12 +41,14 @@ def get_disk_stats(previous_io: psutil._common.sdiskio | None,
             usage = psutil.disk_usage(partition.mountpoint)
         except (PermissionError, FileNotFoundError, OSError):
             continue
-        partitions.append({
-            "device": partition.device,
-            "mountpoint": partition.mountpoint,
-            "fstype": partition.fstype,
-            "usage": usage,
-        })
+        partitions.append(
+            {
+                "device": partition.device,
+                "mountpoint": partition.mountpoint,
+                "fstype": partition.fstype,
+                "usage": usage,
+            }
+        )
 
     partitions.sort(key=lambda item: item["usage"].percent, reverse=True)
 
@@ -83,10 +88,13 @@ def render_disk_usage(win: curses.window, partitions: list[dict], start_y: int) 
     return y
 
 
-def render_disk_io(win: curses.window, stats: dict,
-                   read_history: deque[float],
-                   write_history: deque[float],
-                   start_y: int) -> None:
+def render_disk_io(
+    win: curses.window,
+    stats: dict,
+    read_history: deque[float],
+    write_history: deque[float],
+    start_y: int,
+) -> None:
     """Render current disk I/O speeds with historical sparklines."""
 
     draw_section_header(win, start_y, "I/O Activity")
@@ -106,15 +114,23 @@ def render_disk_io(win: curses.window, stats: dict,
     win.addstr(start_y + 5, 2, f"Total Write: {format_bytes(stats['total_write'])}")
 
     width = win.getmaxyx()[1] - 6
-    draw_sparkline(win, start_y + 7, 2, list(read_history), width=width,
-                   label="Read", unit=" MB/s")
-    draw_sparkline(win, start_y + 8, 2, list(write_history), width=width,
-                   label="Write", unit=" MB/s")
+    draw_sparkline(
+        win, start_y + 7, 2, list(read_history), width=width, label="Read", unit=" MB/s"
+    )
+    draw_sparkline(
+        win,
+        start_y + 8,
+        2,
+        list(write_history),
+        width=width,
+        label="Write",
+        unit=" MB/s",
+    )
 
 
-def render_disk(stdscr: curses.window,
-                nav_items: list[tuple[str, str, str]],
-                active_page: str) -> int:
+def render_disk(
+    stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
+) -> int:
     """Render the disk usage and I/O monitoring page."""
 
     init_colors()

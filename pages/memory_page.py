@@ -2,7 +2,13 @@ import curses
 import psutil
 import time
 
-from utils.ui_helpers import (init_colors, draw_content_window, draw_bar, draw_section_header, format_bytes)
+from utils.ui_helpers import (
+    init_colors,
+    draw_content_window,
+    draw_bar,
+    draw_section_header,
+    format_bytes,
+)
 from utils.input_helpers import handle_input, GLOBAL_KEYS
 
 
@@ -34,7 +40,9 @@ def render_swap_details(win: curses.window, swap) -> None:
     win.addstr(12, 4, f"Free  : {format_bytes(swap.free)}")
 
 
-def render_memory(stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str) -> int:
+def render_memory(
+    stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
+) -> int:
     """Render the Memory Monitor page."""
 
     init_colors()

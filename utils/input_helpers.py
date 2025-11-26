@@ -1,5 +1,6 @@
 import curses
 
+
 def handle_input(stdscr: curses.window, valid_keys: tuple[int, ...] = ()) -> int:
     """
     Wait for and process user key input.
@@ -13,5 +14,14 @@ def handle_input(stdscr: curses.window, valid_keys: tuple[int, ...] = ()) -> int
 
 
 # Optional global constant for shared navigation keys
-GLOBAL_KEYS = (ord('d'), ord('D'), ord('1'), ord('2'), ord('3'),
-                ord('4'), ord('5'), ord('q'), ord('Q'))
+GLOBAL_KEYS = (
+    ord("d"),
+    ord("D"),
+    ord("1"),
+    ord("2"),
+    ord("3"),
+    ord("4"),
+    ord("5"),
+    ord("q"),
+    ord("Q"),
+)

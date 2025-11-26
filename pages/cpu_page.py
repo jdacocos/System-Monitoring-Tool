@@ -39,20 +39,37 @@ def render_overall_cpu(win: curses.window, stats: dict, history: deque[float]) -
     draw_bar(win, 2, 2, "Usage", stats["overall"])
 
     if freq is not None:
-        win.addstr(3, 4, f"Frequency: {freq.current:6.1f} MHz (min {freq.min:.0f}, max {freq.max:.0f})")
+        win.addstr(
+            3,
+            4,
+            f"Frequency: {freq.current:6.1f} MHz (min {freq.min:.0f}, max {freq.max:.0f})",
+        )
     else:
         win.addstr(3, 4, "Frequency information unavailable")
 
-    win.addstr(4, 4, f"Cores: {stats['physical']} physical / {stats['logical']} logical")
+    win.addstr(
+        4, 4, f"Cores: {stats['physical']} physical / {stats['logical']} logical"
+    )
 
     width = win.getmaxyx()[1] - 6
-    draw_sparkline(win, 5, 2, list(history), width=width, label="Trend", unit="%",
-                   fixed_min=0.0, fixed_max=100.0)
+    draw_sparkline(
+        win,
+        5,
+        2,
+        list(history),
+        width=width,
+        label="Trend",
+        unit="%",
+        fixed_min=0.0,
+        fixed_max=100.0,
+    )
 
     return 7
 
 
-def render_per_core_usage(win: curses.window, per_core: list[float], start_y: int = 8) -> None:
+def render_per_core_usage(
+    win: curses.window, per_core: list[float], start_y: int = 8
+) -> None:
     """Render per-core CPU usage bars in a responsive grid."""
 
     draw_section_header(win, start_y - 1, "Per-Core Usage")
@@ -76,7 +93,9 @@ def render_per_core_usage(win: curses.window, per_core: list[float], start_y: in
         draw_bar(win, y, x, label, value, width=bar_width)
 
 
-def render_cpu(stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str) -> int:
+def render_cpu(
+    stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
+) -> int:
     """Render the CPU monitor page."""
 
     init_colors()
@@ -84,7 +103,9 @@ def render_cpu(stdscr: curses.window, nav_items: list[tuple[str, str, str]], act
     stdscr.nodelay(True)
 
     while True:
-        content_win = draw_content_window(stdscr, title="CPU Monitor", nav_items=nav_items, active_page=active_page)
+        content_win = draw_content_window(
+            stdscr, title="CPU Monitor", nav_items=nav_items, active_page=active_page
+        )
 
         if content_win is None:
             key = handle_input(stdscr, GLOBAL_KEYS)

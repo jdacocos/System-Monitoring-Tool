@@ -26,6 +26,9 @@ import os
 from process_constants import RD_ONLY, UTF_8, ProcessStateIndex, StatMapIndex
 from process_util.tty import _read_tty_nr_to_name
 
+# Simple PID → stat cache
+_STAT_CACHE: dict[int, str] = {}
+
 
 def _read_process_stat_fields(pid: int) -> list[str]:
     """
@@ -195,14 +198,28 @@ def _foreground_flag(fields: list[str]) -> str:
 
 
 def get_process_stat(pid: int) -> str:
-    """
-    Returns the human-readable process stat string for a given PID.
-
-    Parameters:
-        pid (int): Process ID
-
-    Returns:
-        str: Process stat string (e.g., 'Ss') or DEFAULT_STAT if unavailable
-    """
+    """Return human-readable process stat string with caching for sleeping processes."""
     fields = _read_process_stat_fields(pid)
-    return _interpret_process_state(fields, pid)
+    if not fields:
+        return StatMapIndex.DEFAULT_STAT
+
+    base_state = _base_state(fields)
+
+    # Use cache for sleeping, disk sleep, or zombie
+    if base_state in ("S", "D", "Z") and pid in _STAT_CACHE:
+        cached = _STAT_CACHE[pid]
+        return f"{base_state}{cached[1:]}"  # keep cached flags, update base state
+
+    # Compute flags
+    flags = (
+        _session_leader_flag(fields, pid)
+        + _priority_flags(fields)
+        + _locked_flag(fields)
+        + _multi_threaded_flag(fields)
+    )
+    fg = _foreground_flag(fields) if base_state == "R" else ""
+
+    stat_str = base_state + flags + fg
+    _STAT_CACHE[pid] = stat_str
+
+    return stat_str

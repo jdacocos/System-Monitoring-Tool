@@ -21,8 +21,12 @@ Notes:
       exits, /proc unavailable, or delta too small).
 """
 
-import time
+import os
 from process_constants import RD_ONLY, UTF_8, CpuStatIndex, ProcessStateIndex
+
+# cache for last readings
+_LAST_TOTAL_JIFFIES: dict[int, int] = {}
+_LAST_PROC_JIFFIES: dict[int, int] = {}
 
 
 def _read_proc_stat_total() -> int:
@@ -40,13 +44,16 @@ def _read_proc_stat_total() -> int:
     try:
         with open(stat_path, RD_ONLY, encoding=UTF_8) as f:
             first_line = f.readline()
-            if first_line.startswith("cpu "):
-                # skip the "cpu" label
-                cpu_fields = first_line.split()[CpuStatIndex.CPU_LABEL_COLUMN :]
 
-                # Sum USER + NICE + SYSTEM + IDLE (indexes defined in CpuStatIndex)
-                total_jiffies = sum(
-                    int(cpu_fields[i]) for i in range(CpuStatIndex.IDLE + 1)
+            if first_line.startswith("cpu "):
+                # Split once and only use required indexes
+                fields = first_line.split()
+
+                total_jiffies = (
+                    int(fields[CpuStatIndex.USER + 1])
+                    + int(fields[CpuStatIndex.NICE + 1])
+                    + int(fields[CpuStatIndex.SYSTEM + 1])
+                    + int(fields[CpuStatIndex.IDLE + 1])
                 )
 
     except FileNotFoundError:
@@ -55,6 +62,7 @@ def _read_proc_stat_total() -> int:
         print(f"Error: Unexpected format in {stat_path}. Not enough CPU fields.")
     except ValueError:
         print(f"Error: Invalid numeric value found in {stat_path}.")
+
     return total_jiffies
 
 
@@ -66,9 +74,9 @@ def _read_proc_pid_time(pid: int) -> int:
     Parameters:
         pid (int): Process ID
 
-    Returns:
-        int: Total CPU jiffies for the process, or 0 if process
-             does not exist or cannot be read.
+        Returns:
+            int: Total CPU jiffies for the process, or 0 if process
+                 does not exist or cannot be read.
     """
     stat_path = f"/proc/{pid}/stat"
     total_proc_jiffies = 0
@@ -77,10 +85,10 @@ def _read_proc_pid_time(pid: int) -> int:
         with open(stat_path, RD_ONLY, encoding=UTF_8) as f:
             fields = f.read().split()
 
-            # Ensure required fields exist
             if len(fields) > ProcessStateIndex.STIME:
                 utime = int(fields[ProcessStateIndex.UTIME])
                 stime = int(fields[ProcessStateIndex.STIME])
+
                 total_proc_jiffies = utime + stime
 
     except FileNotFoundError:
@@ -93,35 +101,47 @@ def _read_proc_pid_time(pid: int) -> int:
     return total_proc_jiffies
 
 
-def get_process_cpu_percent(pid: int, interval: float = 0.1) -> float:
+def get_process_cpu_percent(pid: int) -> float:
     """
-    Calculate the CPU usage percentage of a process over a given interval.
+    Calculate the CPU usage percentage of a process without blocking.
 
-    Parameters:
-        pid (int): Process ID
-        interval (float): Time interval (seconds) between samples
-
-    Returns:
-        float: CPU usage percentage (0.0 - 100.0), or CPU_PERCENT_INVALID if
-               the calculation could not be performed.
+    Uses a cached previous sample instead of time.sleep.
+    First call returns CPU_PERCENT_INVALID.
     """
-    # read initial CPU jiffies
-    proc_jiffies_start = _read_proc_pid_time(pid)
-    total_jiffies_start = _read_proc_stat_total()
+    cpu_percent = CpuStatIndex.CPU_PERCENT_INVALID
 
-    time.sleep(interval)
+    proc_jiffies_current = _read_proc_pid_time(pid)
+    total_jiffies_current = _read_proc_stat_total()
 
-    # read CPU jiffies after time pass
-    proc_jiffies_end = _read_proc_pid_time(pid)
-    total_jiffies_end = _read_proc_stat_total()
+    # only calculate if previous values exist
+    if pid in _LAST_PROC_JIFFIES and pid in _LAST_TOTAL_JIFFIES:
 
-    delta_proc = proc_jiffies_end - proc_jiffies_start
-    delta_total = total_jiffies_end - total_jiffies_start
+        proc_jiffies_prev = _LAST_PROC_JIFFIES[pid]
+        total_jiffies_prev = _LAST_TOTAL_JIFFIES[pid]
 
-    # check division by zero
-    if delta_total <= CpuStatIndex.MIN_DELTA_TOTAL:
-        print(f"Warning: Total jiffies delta too small ({delta_total}).")
-        return CpuStatIndex.CPU_PERCENT_INVALID
+        delta_proc = proc_jiffies_current - proc_jiffies_prev
+        delta_total = total_jiffies_current - total_jiffies_prev
 
-    cpu_percent = (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE
-    return round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)
+        if delta_total > CpuStatIndex.MIN_DELTA_TOTAL:
+            core_count = os.cpu_count() or 1
+
+            cpu_percent = (
+                (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE / core_count
+            )
+
+            cpu_percent = round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)
+
+    # update cache
+    _LAST_PROC_JIFFIES[pid] = proc_jiffies_current
+    _LAST_TOTAL_JIFFIES[pid] = total_jiffies_current
+
+    return cpu_percent
+
+
+def reset_cpu_cache() -> None:
+    """
+    Reset internal CPU jiffy caches.
+    Used when refreshing the process list to avoid stale calculations.
+    """
+    _LAST_PROC_JIFFIES.clear()
+    _LAST_TOTAL_JIFFIES.clear()

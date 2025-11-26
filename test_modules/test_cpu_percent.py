@@ -60,7 +60,7 @@ def test_get_process_cpu_percent():
 
     Checks:
       1. Busy PID (current Python process)
-      2. First PID (usually idle PID 1)
+      2. First PID (usually PID 1)
       3. All other PIDs returned by get_process_pids()
          - Ensure CPU percent is a float
          - Ensure value is within 0.0 - 100.0
@@ -70,25 +70,24 @@ def test_get_process_cpu_percent():
     if not pids:
         pytest.skip("No PIDs found on this system to test get_process_cpu_percent.")
 
+    print(f"Testing CPU percent for {len(pids)} PIDs...")
+
     # --- Test 1: Busy PID (current Python process) ---
     busy_pid = os.getpid()
-    cpu_busy = get_process_cpu_percent(busy_pid, interval=0.5)
-    print(f"CPU percent for busy PID {busy_pid}: {cpu_busy}%")
-    assert isinstance(cpu_busy, float), "CPU percent should be a float"
-    assert 0.0 <= cpu_busy <= 100.0, "CPU percent should be between 0 and 100"
+    cpu_busy = get_process_cpu_percent(busy_pid)
+    print(f"Busy PID {busy_pid} CPU%: {cpu_busy}")
+    assert isinstance(cpu_busy, float)
+    assert 0.0 <= cpu_busy <= 100.0
 
-    # --- Test 2: First PID (likely idle) ---
-    first_pid = pids[0]
-    cpu_first = get_process_cpu_percent(first_pid, interval=0.5)
-    print(f"CPU percent for first PID {first_pid}: {cpu_first}%")
-    assert isinstance(cpu_first, float), "CPU percent should be a float"
-    assert 0.0 <= cpu_first <= 100.0, "CPU percent should be between 0 and 100"
+    # --- Test 2: First PID (usually PID 1) ---
+    cpu_first = get_process_cpu_percent(pids[0])
+    print(f"First PID {pids[0]} CPU%: {cpu_first}")
+    assert isinstance(cpu_first, float)
+    assert 0.0 <= cpu_first <= 100.0
 
-    # --- Test 3: Loop over all PIDs ---
+    # --- Test 3: All other PIDs ---
     for pid in pids:
-        cpu = get_process_cpu_percent(pid, interval=0.1)  # smaller interval for speed
-        print(f"PID {pid} CPU: {cpu}%")
-        assert isinstance(cpu, float), f"CPU percent for PID {pid} should be a float"
-        assert (
-            0.0 <= cpu <= 100.0
-        ), f"CPU percent for PID {pid} should be between 0 and 100"
+        cpu = get_process_cpu_percent(pid)
+        print(f"PID {pid} CPU%: {cpu}")
+        assert isinstance(cpu, float)
+        assert 0.0 <= cpu <= 100.0
