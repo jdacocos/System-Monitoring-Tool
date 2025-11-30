@@ -6,42 +6,52 @@ from cpu import get_cpu_usage
 from memory import get_mem_usage
 
 #-------------------------------------------------------------
-#-------------------------------------------------------------
-
 # CPU TESTING
-
-print("---------- CPU Total Usage ----------")
-
-print()
-print("CPU: ", get_cpu_usage(), "%")
-
-print()
-
-print("psutil CPU:", psutil.cpu_percent(interval=0.1), "%")
-print()
-
 #-------------------------------------------------------------
 
-print("---------- CPU Per Core Usage ----------")
+print("\n========== CPU USAGE COMPARISON ==========\n")
 
-per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+# --- Per-core CPU % --- #
+
+print("psutil per-core CPU %:")
+psutil_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+print(psutil_per_core)
+
+# --- Overall CPU % --- #
+
+psutil_overall = psutil.cpu_percent(interval=0.1)
+
+print("\n---------- CPU Total Usage ----------\n")
+print("psutil overall CPU:", psutil_overall, "%")
+
+
+# --- CPU FREQUENCY --- #
+print("\n========== CPU FREQUENCY ==========\n")
+print("psutil:", psutil.cpu_freq())
+
+
+# --- CPU COUNTS ---
+print("\n========== CPU COUNTS ==========\n")
+print("psutil logical:", psutil.cpu_count(logical=True))
 
 print()
-for i, percent in enumerate(per_core):
-    print("psutil Core", i, ":", percent, "%")
-print()
+print("psutil physical:", psutil.cpu_count(logical=False))
 
-#-------------------------------------------------------------
 
-print("---------- CPU Frequency ----------")
+# --- Full stats dict ---
+print("\n========== FULL STATS ==========\n")
 
-freq = psutil.cpu_freq()
+print("\npsutil reference:")
+print({
+    "overall": psutil_overall,
+    "per_core": psutil_per_core,
+    "freq": psutil.cpu_freq(),
+    "logical": psutil.cpu_count(logical=True),
+    "physical": psutil.cpu_count(logical=False),
+})
 
-print()
-print("psutil Current:", freq.current, "MHz")
-print("psutil Min:", freq.min, "MHz")
-print("psutil Max:", freq.max, "MHz")
-print()
+print("\n========================================\n")
+
 
 #-------------------------------------------------------------
 #-------------------------------------------------------------
