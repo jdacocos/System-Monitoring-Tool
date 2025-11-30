@@ -2,55 +2,74 @@
 
 import psutil
 
-from cpu import get_cpu_usage
+from cpu_info import (
+    get_cpu_percent_per_core,
+    get_cpu_freq,
+    get_logical_cpu_count,
+    get_physical_cpu_count,
+    get_cpu_stats,
+)
 from memory import get_mem_usage
+
 
 #-------------------------------------------------------------
 # CPU TESTING
 #-------------------------------------------------------------
 
-print("\n========== CPU USAGE COMPARISON ==========\n")
+print("\n==================== CPU USAGE COMPARISON ====================\n")
 
-# --- Per-core CPU % --- #
+# ---------- Per-core CPU % ---------- #
+
+print("---------- Per-Core CPU% ----------\n")
+
+print("Our per-core CPU%:")
+our_per_core = get_cpu_percent_per_core(interval=0.1)
+print(our_per_core)
 
 print("psutil per-core CPU %:")
 psutil_per_core = psutil.cpu_percent(interval=0.1, percpu=True)
 print(psutil_per_core)
 
-# --- Overall CPU % --- #
-
-psutil_overall = psutil.cpu_percent(interval=0.1)
+# ---------- Overall CPU % ---------- #
 
 print("\n---------- CPU Total Usage ----------\n")
+
+our_overall = sum(our_per_core) / len(our_per_core) if our_per_core else 0
+print("Our overall CPU:", our_overall, "%")
+
+psutil_overall = psutil.cpu_percent(interval=0.1)
 print("psutil overall CPU:", psutil_overall, "%")
 
+print("\n==============================================================\n")
 
-# --- CPU FREQUENCY --- #
-print("\n========== CPU FREQUENCY ==========\n")
+
+
+print("\n==================== CPU Frequency ====================\n")
+
+print("Our Freq:", get_cpu_freq())
 print("psutil:", psutil.cpu_freq())
 
+print("\n=======================================================\n")
 
 # --- CPU COUNTS ---
-print("\n========== CPU COUNTS ==========\n")
-print("psutil logical:", psutil.cpu_count(logical=True))
+#print("\n========== CPU COUNTS ==========\n")
+#print("psutil logical:", psutil.cpu_count(logical=True))
 
-print()
-print("psutil physical:", psutil.cpu_count(logical=False))
+#print()
+#print("psutil physical:", psutil.cpu_count(logical=False))
 
 
 # --- Full stats dict ---
-print("\n========== FULL STATS ==========\n")
+#print("\n========== FULL STATS ==========\n")
 
-print("\npsutil reference:")
-print({
-    "overall": psutil_overall,
-    "per_core": psutil_per_core,
-    "freq": psutil.cpu_freq(),
-    "logical": psutil.cpu_count(logical=True),
-    "physical": psutil.cpu_count(logical=False),
-})
-
-print("\n========================================\n")
+#print("\npsutil reference:")
+#print({
+#    "overall": psutil_overall,
+#    "per_core": psutil_per_core,
+#    "freq": psutil.cpu_freq(),
+#    "logical": psutil.cpu_count(logical=True),
+#    "physical": psutil.cpu_count(logical=False),
+#})
 
 
 #-------------------------------------------------------------
@@ -58,16 +77,16 @@ print("\n========================================\n")
 
 # MEMORY TESTING
 
-print("---------- Memory Usage ----------")
+#print("---------- Memory Usage ----------")
 
-print()
-print("Memory: ", get_mem_usage())
+#print()
+#print("Memory: ", get_mem_usage())
 
-print()
+#print()
 
-vm = psutil.virtual_memory()
-print("psutil Total:", vm.total)
-print("psutil Used:", vm.used)
-print("psutil Available:", vm.available)
-print("psutil Percent:", vm.percent, "%")
-print()
+#vm = psutil.virtual_memory()
+#print("psutil Total:", vm.total)
+#print("psutil Used:", vm.used)
+#print("psutil Available:", vm.available)
+#print("psutil Percent:", vm.percent, "%")
+#print()
