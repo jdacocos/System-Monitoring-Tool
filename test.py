@@ -9,10 +9,11 @@ from cpu_info import (
     get_physical_cpu_count,
     get_cpu_stats,
 )
+from memory_info import get_virtual_memory, get_swap_memory
 
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # CPU TESTING
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 
 print("\n==================== CPU USAGE COMPARISON ====================\n")
 
@@ -41,7 +42,6 @@ print("psutil overall CPU:", psutil_overall, "%")
 print("\n==============================================================\n")
 
 
-
 print("\n==================== CPU Frequency ====================\n")
 
 print("our Freq:", get_cpu_freq())
@@ -65,23 +65,27 @@ print("Our get_cpu_stats():")
 print(get_cpu_stats())
 
 print("\npsutil reference:")
-print({
-    "overall": psutil_overall,
-    "per_core": psutil_per_core,
-    "freq": psutil.cpu_freq(),
-    "logical": psutil.cpu_count(logical=True),
-    "physical": psutil.cpu_count(logical=False),
-})
+print(
+    {
+        "overall": psutil_overall,
+        "per_core": psutil_per_core,
+        "freq": psutil.cpu_freq(),
+        "logical": psutil.cpu_count(logical=True),
+        "physical": psutil.cpu_count(logical=False),
+    }
+)
 print("\n====================================================\n")
 
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 # MEMORY TESTING
-#-------------------------------------------------------------
+# -------------------------------------------------------------
 
 print("\n==================== Virtual Memory ====================\n")
+print("our virtual:", get_virtual_memory())
 print("psutil virtual:", psutil.virtual_memory())
 print("\n========================================================\n")
 
 print("\n==================== Swap Memory ====================\n")
+print("our swap:", get_swap_memory())
 print("psutil swap:", psutil.swap_memory())
 print("\n=====================================================\n")

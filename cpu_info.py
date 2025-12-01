@@ -1,13 +1,13 @@
-# Get CPU information 
+# Get CPU information
 
 import time
-import os
 from utilities import read_file
 from collections import namedtuple
 
 cpufreq = namedtuple("cpufreq", ["current", "min", "max"])
 
 # ==================== CPU Counts ==================== #
+
 
 # --------------------------------------------------
 # Replicates psutil.cpu_count(logical=True).
@@ -17,6 +17,8 @@ def get_logical_cpu_count():
     if not cpuinfo:
         return None
     return sum(1 for line in cpuinfo.splitlines() if line.startswith("processor"))
+
+
 # --------------------------------------------------
 # Replicates psutil.cpu_count(logical=False) by counting unique
 # (physical id, core id) pairs.
@@ -25,7 +27,7 @@ def get_physical_cpu_count():
     phys_core_pairs = set()
     phys_id = None
     core_id = None
-    
+
     cpuinfo = read_file("/proc/cpuinfo")
 
     for line in cpuinfo.splitlines():
@@ -39,7 +41,9 @@ def get_physical_cpu_count():
 
     return len(phys_core_pairs) if phys_core_pairs else None
 
+
 # ==================== CPU Frequency ==================== #
+
 
 # --------------------------------------------------
 # Replicates psutil.cpu_freq()
@@ -65,7 +69,9 @@ def get_cpu_freq():
 
     return cpufreq(current=curr, min=0.0, max=0.0)
 
+
 # ==================== CPU Percent Per Core ==================== #
+
 
 def read_proc_stat():
     data = read_file("/proc/stat")
@@ -75,6 +81,7 @@ def read_proc_stat():
 def parse_cpu_line(line):
     parts = line.split()
     return list(map(int, parts[1:]))
+
 
 # --------------------------------------------------
 # Returns per-core (total_time, idle_time)
@@ -93,6 +100,7 @@ def cpu_totals():
         totals.append((total, total_idle))
 
     return totals
+
 
 # --------------------------------------------------
 # Replicates psutil.cpu_percent(percpu=True)
@@ -115,7 +123,9 @@ def get_cpu_percent_per_core(interval=0.1):
 
     return percentages
 
+
 # ==================== Test Composite ==================== #
+
 
 def get_cpu_stats() -> dict:
     per_core = get_cpu_percent_per_core(interval=0.1)
@@ -128,4 +138,3 @@ def get_cpu_stats() -> dict:
         "logical": get_logical_cpu_count(),
         "physical": get_physical_cpu_count(),
     }
-
