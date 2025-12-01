@@ -3,6 +3,9 @@
 import time
 import os
 from utilities import read_file
+from collections import namedtuple
+
+cpufreq = namedtuple("cpufreq", ["current", "min", "max"])
 
 # ==================== CPU Counts ==================== #
 
@@ -10,12 +13,10 @@ from utilities import read_file
 # Replicates psutil.cpu_count(logical=True).
 # --------------------------------------------------
 def get_logical_cpu_count():
-    try:
-        items = os.listdir("/sys/devices/system/cpu")
-        return len([d for d in items if d.startswith("cpu") and d[3:].isdigit()])
-    except Exception:
+    cpuinfo = read_file("/proc/cpuinfo")
+    if not cpuinfo:
         return None
-
+    return sum(1 for line in cpuinfo.splitlines() if line.startswith("processor"))
 # --------------------------------------------------
 # Replicates psutil.cpu_count(logical=False) by counting unique
 # (physical id, core id) pairs.
@@ -25,7 +26,7 @@ def get_physical_cpu_count():
     phys_id = None
     core_id = None
     
-    cpuinfo = read_small_file("/proc/cpuinfo")
+    cpuinfo = read_file("/proc/cpuinfo")
 
     for line in cpuinfo.splitlines():
         if line.startswith("physical id"):
@@ -46,26 +47,23 @@ def get_physical_cpu_count():
 # --------------------------------------------------
 def get_cpu_freq():
     cpuinfo = read_file("/proc/cpuinfo")
+
     if cpuinfo is None:
         return None
 
-    cur = None
+    curr = None
     for line in cpuinfo.split("\n"):
         if "cpu MHz" in line:
             try:
-                cur = float(line.split(":")[1].strip())
+                curr = float(line.split(":")[1].strip())
             except:
-                cur = None
+                curr = None
             break
 
-    if cur is None:
+    if curr is None:
         return None
 
-    return {
-        "current": cur,
-        "min": 0.0,
-        "max": 0.0
-    }
+    return cpufreq(current=curr, min=0.0, max=0.0)
 
 # ==================== CPU Percent Per Core ==================== #
 

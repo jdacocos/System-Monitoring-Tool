@@ -35,7 +35,7 @@ print(psutil_per_core)
 print("\n---------- CPU Total Usage ----------\n")
 
 our_overall = sum(our_per_core) / len(our_per_core) if our_per_core else 0
-print("Our overall CPU:", our_overall, "%")
+print("our overall CPU:", our_overall, "%")
 
 psutil_overall = psutil.cpu_percent(interval=0.1)
 print("psutil overall CPU:", psutil_overall, "%")
@@ -46,31 +46,35 @@ print("\n==============================================================\n")
 
 print("\n==================== CPU Frequency ====================\n")
 
-print("Our Freq:", get_cpu_freq())
+print("our Freq:", get_cpu_freq())
 print("psutil:", psutil.cpu_freq())
 
 print("\n=======================================================\n")
 
-# --- CPU COUNTS ---
-#print("\n========== CPU COUNTS ==========\n")
-#print("psutil logical:", psutil.cpu_count(logical=True))
+print("\n==================== CPU Counts ====================\n")
 
-#print()
-#print("psutil physical:", psutil.cpu_count(logical=False))
+print("our logical:", get_logical_cpu_count())
+print("our physical:", get_physical_cpu_count(), "\n")
 
+print("psutil logical:", psutil.cpu_count(logical=True))
+print("psutil physical:", psutil.cpu_count(logical=False))
 
-# --- Full stats dict ---
-#print("\n========== FULL STATS ==========\n")
+print("\n====================================================\n")
 
-#print("\npsutil reference:")
-#print({
-#    "overall": psutil_overall,
-#    "per_core": psutil_per_core,
-#    "freq": psutil.cpu_freq(),
-#    "logical": psutil.cpu_count(logical=True),
-#    "physical": psutil.cpu_count(logical=False),
-#})
+print("\n==================== Full Stats ====================\n")
 
+print("Our get_cpu_stats():")
+print(get_cpu_stats())
+
+print("\npsutil reference:")
+print({
+    "overall": psutil_overall,
+    "per_core": psutil_per_core,
+    "freq": psutil.cpu_freq(),
+    "logical": psutil.cpu_count(logical=True),
+    "physical": psutil.cpu_count(logical=False),
+})
+print("\n====================================================\n")
 
 #-------------------------------------------------------------
 #-------------------------------------------------------------
