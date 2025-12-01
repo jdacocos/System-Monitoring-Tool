@@ -1,6 +1,14 @@
 # Get memory usage information
 
 from utilities import read_file
+from collections import namedtuple
+
+vmem = namedtuple("vmem", ["total", "available", "percent", "used", "free", "active",
+                           "inactive", "buffers", "cached", "shared", "slab"])
+smem = namedtuple("smem", ["total", "used", "free", "percent", "sin", "sout"])
+
+
+
 
 def get_mem_usage():
     mem = {}
@@ -17,8 +25,8 @@ def get_mem_usage():
     used = total - (free + buffers + cached)
 
     return {
-        "total_mb": round(total / 1024, 2),
-        "used_mb": round(used / 1024, 2),
-        "free_mb": round(free / 1024, 2),
-        "cached_mb": round(cached / 1024, 2)
+        "total_mb": round(total, 2),
+        "used_mb": round(used, 2),
+        "free_mb": round(free, 2),
+        "cached_mb": round(cached, 2)
     }

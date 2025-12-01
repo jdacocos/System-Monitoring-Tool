@@ -9,8 +9,6 @@ from cpu_info import (
     get_physical_cpu_count,
     get_cpu_stats,
 )
-from memory import get_mem_usage
-
 
 #-------------------------------------------------------------
 # CPU TESTING
@@ -37,7 +35,7 @@ print("\n---------- CPU Total Usage ----------\n")
 our_overall = sum(our_per_core) / len(our_per_core) if our_per_core else 0
 print("our overall CPU:", our_overall, "%")
 
-psutil_overall = psutil.cpu_percent(interval=0.1)
+psutil_overall = sum(psutil_per_core) / len(psutil_per_core) if psutil_per_core else 0
 print("psutil overall CPU:", psutil_overall, "%")
 
 print("\n==============================================================\n")
@@ -77,20 +75,13 @@ print({
 print("\n====================================================\n")
 
 #-------------------------------------------------------------
+# MEMORY TESTING
 #-------------------------------------------------------------
 
-# MEMORY TESTING
+print("\n==================== Virtual Memory ====================\n")
+print("psutil virtual:", psutil.virtual_memory())
+print("\n========================================================\n")
 
-#print("---------- Memory Usage ----------")
-
-#print()
-#print("Memory: ", get_mem_usage())
-
-#print()
-
-#vm = psutil.virtual_memory()
-#print("psutil Total:", vm.total)
-#print("psutil Used:", vm.used)
-#print("psutil Available:", vm.available)
-#print("psutil Percent:", vm.percent, "%")
-#print()
+print("\n==================== Swap Memory ====================\n")
+print("psutil swap:", psutil.swap_memory())
+print("\n=====================================================\n")
