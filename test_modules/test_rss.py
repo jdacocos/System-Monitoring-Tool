@@ -19,7 +19,6 @@ Requirements:
     pytest
 """
 
-import pytest
 from process_util.pids import get_process_pids
 from process_util.rss import _read_meminfo_total, get_process_rss
 

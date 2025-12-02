@@ -14,7 +14,6 @@ Requirements:
 Linux-only: Requires access to a mounted /proc filesystem.
 """
 
-import pytest
 import os
 from process_util.pids import open_file_system, get_process_pids
 
