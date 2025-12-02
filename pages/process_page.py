@@ -178,11 +178,19 @@ def draw_footer(win: curses.window, height: int) -> None:
     win.attroff(curses.color_pair(2))
 
 
-def adjust_scroll(
-    selected_index: int, scroll_start: int, height: int, total_items: int
-):
-    """Return updated scroll_start to ensure selected_index is visible."""
-    visible_lines = height - 6
+def update_process_cache(
+    cached: list[ProcessInfo], sort_mode: str, last_refresh: float, interval: float
+) -> tuple[list[ProcessInfo], float]:
+    """Update process cache if needed based on refresh interval."""
+    now = time.time()
+    if not cached or (now - last_refresh) >= interval:
+        cached = get_all_processes(sort_mode)
+        last_refresh = now
+    return cached, last_refresh
+
+
+def adjust_scroll(selected_index: int, scroll_start: int, visible_lines: int) -> int:
+    """Return new scroll_start based on selected_index and visible lines."""
     if selected_index < scroll_start:
         scroll_start = selected_index
     elif selected_index >= scroll_start + visible_lines:
@@ -190,19 +198,24 @@ def adjust_scroll(
     return scroll_start
 
 
-def refresh_processes(cached_processes, sort_mode, last_refresh, refresh_interval):
-    """Refresh process list if interval has passed or cache is empty."""
-    now = time.time()
-    if not cached_processes or (now - last_refresh) >= refresh_interval:
-        cached_processes = get_all_processes(sort_mode)
-        last_refresh = now
-    return cached_processes, last_refresh
+def draw_and_refresh(
+    win: curses.window,
+    processes: list[ProcessInfo],
+    selected_index: int,
+    scroll_start: int,
+    sort_mode: str,
+):
+    """Draw process list and refresh curses windows."""
+    draw_process_list(win, processes, selected_index, scroll_start, sort_mode)
+    win.noutrefresh()
+    curses.doupdate()
 
 
 def render_processes(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
     """Interactive process viewer using curses with sortable and scrollable process list."""
+
     init_colors()
     curses.curs_set(0)
     stdscr.nodelay(True)
@@ -217,12 +230,8 @@ def render_processes(
 
     while True:
         content_win = draw_content_window(
-            stdscr,
-            title="Process Manager",
-            nav_items=nav_items,
-            active_page=active_page,
+            stdscr, "Process Manager", nav_items, active_page
         )
-
         if content_win is None:
             key = handle_input(stdscr, GLOBAL_KEYS)
             if key != -1:
@@ -230,14 +239,11 @@ def render_processes(
             time.sleep(0.1)
             continue
 
-        now = time.time()
-        if (
-            needs_refresh
-            or (now - last_refresh) >= refresh_interval
-            or not cached_processes
-        ):
-            cached_processes = get_all_processes(sort_mode)
-            last_refresh = now
+        # Update process cache
+        if needs_refresh:
+            cached_processes, last_refresh = update_process_cache(
+                cached_processes, sort_mode, last_refresh, refresh_interval
+            )
             needs_refresh = False
 
         processes = cached_processes
@@ -247,24 +253,18 @@ def render_processes(
             time.sleep(0.5)
             continue
 
-        # Clamp selected_index
+        # Clamp selected index
         selected_index = max(0, min(selected_index, len(processes) - 1))
 
-        # Adjust scroll
+        # Adjust scrolling
         height, _ = content_win.getmaxyx()
         visible_lines = height - 6
-        if selected_index < scroll_start:
-            scroll_start = selected_index
-        elif selected_index >= scroll_start + visible_lines:
-            scroll_start = selected_index - visible_lines + 1
+        scroll_start = adjust_scroll(selected_index, scroll_start, visible_lines)
 
-        draw_process_list(
+        # Draw process list
+        draw_and_refresh(
             content_win, processes, selected_index, scroll_start, sort_mode
         )
-
-        content_win.noutrefresh()
-        stdscr.noutrefresh()
-        curses.doupdate()
 
         # Handle input
         key = stdscr.getch()
