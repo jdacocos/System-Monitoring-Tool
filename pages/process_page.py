@@ -189,13 +189,16 @@ def update_process_cache(
     return cached, last_refresh
 
 
-def adjust_scroll(selected_index: int, scroll_start: int, visible_lines: int) -> int:
-    """Return new scroll_start based on selected_index and visible lines."""
-    if selected_index < scroll_start:
-        scroll_start = selected_index
-    elif selected_index >= scroll_start + visible_lines:
-        scroll_start = selected_index - visible_lines + 1
-    return scroll_start
+def clamp_and_scroll(state: dict, visible_lines: int) -> None:
+    """Clamp selected_index and adjust scroll_start in state."""
+    processes = state["cached_processes"]
+    state["selected_index"] = max(0, min(state["selected_index"], len(processes) - 1))
+    sel = state["selected_index"]
+    scroll = state["scroll_start"]
+    if sel < scroll:
+        state["scroll_start"] = sel
+    elif sel >= scroll + visible_lines:
+        state["scroll_start"] = sel - visible_lines + 1
 
 
 def draw_and_refresh(
@@ -227,6 +230,38 @@ def init_process_viewer(stdscr: curses.window) -> dict:
     }
 
 
+def process_user_input(key: int, state: dict) -> int | None:
+    """Handle user input and update state. Return key if quitting, else None."""
+    processes = state["cached_processes"]
+    sel, sort_mode, kill_flag, quit_flag = handle_process_input(
+        key, state["selected_index"], processes
+    )
+    state["selected_index"] = sel
+    if sort_mode:
+        state["sort_mode"] = sort_mode
+        state["needs_refresh"] = True
+    if kill_flag:
+        try:
+            os.kill(processes[sel].pid, 9)
+            state["needs_refresh"] = True
+        except (PermissionError, ProcessLookupError):
+            pass
+    if quit_flag:
+        return key
+    return None
+
+
+def refresh_process_state(state: dict) -> None:
+    """Refresh cached processes if interval has passed."""
+    now = time.time()
+    if not state["cached_processes"] or (
+        now - state["last_refresh"] >= state["refresh_interval"]
+    ):
+        state["cached_processes"] = get_all_processes(state["sort_mode"])
+        state["last_refresh"] = now
+        state["needs_refresh"] = False
+
+
 def render_processes(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
@@ -242,20 +277,7 @@ def render_processes(
             time.sleep(0.1)
             continue
 
-        # Refresh process list if needed
-        now = time.time()
-        if (
-            state["needs_refresh"]
-            or not state["cached_processes"]
-            or (now - state["last_refresh"] >= state["refresh_interval"])
-        ):
-            state["cached_processes"], state["last_refresh"] = refresh_processes(
-                state["cached_processes"],
-                state["sort_mode"],
-                state["last_refresh"],
-                state["refresh_interval"],
-            )
-            state["needs_refresh"] = False
+        refresh_process_state(state)
 
         processes = state["cached_processes"]
         if not processes:
@@ -264,43 +286,20 @@ def render_processes(
             time.sleep(0.5)
             continue
 
-        # Clamp selection and adjust scroll
-        state["selected_index"] = max(
-            0, min(state["selected_index"], len(processes) - 1)
-        )
         height, _ = win.getmaxyx()
-        state["scroll_start"] = adjust_scroll(
-            state["selected_index"], state["scroll_start"], height, len(processes)
-        )
-
-        # Draw list and footer
-        draw_process_list(
+        clamp_and_scroll(state, height - 6)
+        draw_and_refresh(
             win,
             processes,
             state["selected_index"],
             state["scroll_start"],
             state["sort_mode"],
         )
-        win.noutrefresh()
-        stdscr.noutrefresh()
-        curses.doupdate()
 
-        # Handle input
         key = stdscr.getch()
         if key != -1:
-            sel, sort_mode, kill_flag, quit_flag = handle_process_input(
-                key, state["selected_index"], processes
-            )
-            state["selected_index"] = sel
-            if sort_mode:
-                state["sort_mode"] = sort_mode
-                state["needs_refresh"] = True
-            if kill_flag:
-                try:
-                    os.kill(processes[state["selected_index"]].pid, 9)
-                    state["needs_refresh"] = True
-                except (PermissionError, ProcessLookupError):
-                    pass
-            if quit_flag:
-                return key
+            quit_key = process_user_input(key, state)
+            if quit_key is not None:
+                return quit_key
+
         time.sleep(0.1)
