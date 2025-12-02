@@ -20,6 +20,7 @@ Requirements:
     pytest
 """
 
+import pytest
 from process_util.command import get_process_command
 from process_util.pids import get_process_pids
 

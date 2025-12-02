@@ -1,7 +1,6 @@
 import curses
 import time
-import os
-from typing import List, Tuple
+from typing import List
 
 from utils.ui_helpers import init_colors, draw_content_window, draw_section_header
 from utils.input_helpers import handle_input, GLOBAL_KEYS
@@ -39,11 +38,13 @@ def get_all_processes(sort_mode: str = "cpu") -> List[ProcessInfo]:
     return processes
 
 
-def draw_process_list(win: curses.window,
-                      processes: List[ProcessInfo],
-                      selected_index: int,
-                      start: int,
-                      sort_mode: str) -> None:
+def draw_process_list(
+    win: curses.window,
+    processes: List[ProcessInfo],
+    selected_index: int,
+    start: int,
+    sort_mode: str,
+) -> None:
     """Render a scrollable list of processes with fixed column widths."""
     height, width = win.getmaxyx()
     draw_section_header(win, 1, f"Running Processes (Sort by {sort_mode.upper()})")
@@ -55,11 +56,22 @@ def draw_process_list(win: curses.window,
         f"{{tty:<{COL_WIDTHS['tty']}}} {{stat:<{COL_WIDTHS['stat']}}} "
         f"{{start:<{COL_WIDTHS['start']}}} {{time:<{COL_WIDTHS['time']}}} COMMAND"
     )
-    win.addstr(2, 2, header_fmt.format(
-        user="USER", pid="PID", cpu="%CPU", mem="%MEM",
-        vsz="VSZ", rss="RSS", tty="TTY", stat="STAT",
-        start="START", time="TIME"
-    ))
+    win.addstr(
+        2,
+        2,
+        header_fmt.format(
+            user="USER",
+            pid="PID",
+            cpu="%CPU",
+            mem="%MEM",
+            vsz="VSZ",
+            rss="RSS",
+            tty="TTY",
+            stat="STAT",
+            start="START",
+            time="TIME",
+        ),
+    )
     win.hline(3, 2, curses.ACS_HLINE, width - 4)
 
     visible_lines = height - 6
@@ -67,9 +79,9 @@ def draw_process_list(win: curses.window,
 
     for i, proc in enumerate(processes[start:end], start=start):
         y = 4 + (i - start)
-        is_selected = (i == selected_index)
+        is_selected = i == selected_index
 
-        tty_display = (proc.tty or "?")[:COL_WIDTHS['tty'] - 1]
+        tty_display = (proc.tty or "?")[: COL_WIDTHS["tty"] - 1]
         used_width = sum(COL_WIDTHS.values())
         command_width = max(10, width - 4 - used_width)
         command_display = (proc.command or "")[:command_width]
@@ -99,9 +111,9 @@ def draw_process_list(win: curses.window,
     win.attroff(curses.color_pair(2))
 
 
-def render_processes(stdscr: curses.window,
-                     nav_items: list[tuple[str, str, str]],
-                     active_page: str) -> int:
+def render_processes(
+    stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
+) -> int:
     """Interactive process viewer, relies on curses.wrapper for safe cleanup."""
     init_colors()
     curses.curs_set(0)
@@ -131,7 +143,11 @@ def render_processes(stdscr: curses.window,
             continue
 
         now = time.time()
-        if needs_refresh or (now - last_refresh) >= refresh_interval or not cached_processes:
+        if (
+            needs_refresh
+            or (now - last_refresh) >= refresh_interval
+            or not cached_processes
+        ):
             cached_processes = get_all_processes(sort_mode)
             last_refresh = now
             needs_refresh = False
@@ -154,7 +170,9 @@ def render_processes(stdscr: curses.window,
         elif selected_index >= scroll_start + visible_lines:
             scroll_start = selected_index - visible_lines + 1
 
-        draw_process_list(content_win, processes, selected_index, scroll_start, sort_mode)
+        draw_process_list(
+            content_win, processes, selected_index, scroll_start, sort_mode
+        )
 
         content_win.noutrefresh()
         stdscr.noutrefresh()
@@ -174,30 +192,40 @@ def render_processes(stdscr: curses.window,
             selected_index = min(selected_index, len(processes) - 1)
 
         # Sorting (separate if statements, not elif)
-        if key in (ord('c'), ord('C')):
+        if key in (ord("c"), ord("C")):
             sort_mode = "cpu"
             needs_refresh = True
-        elif key in (ord('m'), ord('M')):
+        elif key in (ord("m"), ord("M")):
             sort_mode = "mem"
             needs_refresh = True
-        elif key in (ord('p'), ord('P')):
+        elif key in (ord("p"), ord("P")):
             sort_mode = "pid"
             needs_refresh = True
-        elif key in (ord('n'), ord('N')):
+        elif key in (ord("n"), ord("N")):
             sort_mode = "name"
             needs_refresh = True
 
         # Kill selected process
-        elif key in (ord('k'), ord('K')):
+        elif key in (ord("k"), ord("K")):
             try:
                 import os
+
                 os.kill(processes[selected_index].pid, 9)
                 needs_refresh = True
             except (PermissionError, ProcessLookupError):
                 pass
 
         # Quit or switch pages
-        elif key in (ord('d'), ord('D'), ord('1'), ord('3'), ord('4'), ord('5'), ord('q'), ord('Q')):
+        elif key in (
+            ord("d"),
+            ord("D"),
+            ord("1"),
+            ord("3"),
+            ord("4"),
+            ord("5"),
+            ord("q"),
+            ord("Q"),
+        ):
             return key
 
         time.sleep(0.1)

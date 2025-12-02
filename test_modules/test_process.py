@@ -25,6 +25,7 @@ import pytest
 from process_struct import ProcessInfo
 from process import populate_process_list
 
+
 @pytest.fixture
 def processes() -> list[ProcessInfo]:
     """Returns the populated process list."""

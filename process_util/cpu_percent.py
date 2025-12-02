@@ -123,10 +123,16 @@ def get_process_cpu_percent(pid: int) -> float:
         delta_total = total_jiffies_current - total_jiffies_prev
 
         if delta_total > CpuStatIndex.MIN_DELTA_TOTAL:
-            core_count = os.cpu_count() or 1
+            core_count = os.cpu_count() or CpuStatIndex.CPU_DEFAULT_COUNT
 
             cpu_percent = (
                 (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE / core_count
+            )
+
+            # Cap at 100%, ensure >= 0
+            cpu_percent = min(
+                max(cpu_percent, CpuStatIndex.CPU_PERCENT_INVALID),
+                CpuStatIndex.CPU_PERCENT_SCALE,
             )
 
             cpu_percent = round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)

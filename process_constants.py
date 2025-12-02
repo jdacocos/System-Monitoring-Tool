@@ -66,6 +66,7 @@ class CpuStatIndex:
     GUEST_NICE = 9
     # constants for calculating cpu_percent
     CPU_LABEL_COLUMN = 1
+    CPU_DEFAULT_COUNT = 1
     CPU_PERCENT_SCALE = 100.0
     CPU_PERCENT_ROUND_DIGITS = 2
     CPU_PERCENT_INVALID = 0.0
