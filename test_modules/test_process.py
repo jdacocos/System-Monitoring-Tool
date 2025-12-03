@@ -21,65 +21,68 @@ Requirements:
     - The process.py module with a working populate_process_list() function
 """
 
+# pylint: disable=redefined-outer-name
+
 import pytest
+import psutil
 from process_struct import ProcessInfo
 from process import populate_process_list
 
 
 @pytest.fixture
 def processes() -> list[ProcessInfo]:
-    """Returns the populated process list."""
-    procs = populate_process_list()
-    assert isinstance(procs, list)
-    return procs
+    """Return the list of populated ProcessInfo objects."""
+    proc_list = populate_process_list()
+    assert isinstance(proc_list, list), "populate_process_list() must return a list"
+    return proc_list
 
 
-def test_process_list_not_empty(processes):
+def test_process_list_not_empty(processes: list[ProcessInfo]) -> None:
     """Ensure at least one process is returned."""
-    assert len(processes) > 0, "populate_process_list() returned zero processes"
+    assert processes, "populate_process_list() returned zero processes"
 
 
-def test_process_types(processes):
-    """Ensure the list contains only ProcessInfo objects."""
-    for p in processes:
-        assert isinstance(p, ProcessInfo), f"Invalid type: {type(p)}"
+def test_process_types(processes: list[ProcessInfo]) -> None:
+    """Ensure all items in the list are ProcessInfo objects."""
+    for proc in processes:
+        assert isinstance(proc, ProcessInfo), f"Invalid type: {type(proc)}"
 
 
-def test_required_fields_exist(processes):
-    """Check all fields of ProcessInfo are populated with valid types."""
-    for p in processes:
-        assert isinstance(p.user, str)
-        assert isinstance(p.pid, int)
-        assert isinstance(p.cpu_percent, float)
-        assert isinstance(p.mem_percent, float)
-        assert isinstance(p.vsz, int)
-        assert isinstance(p.rss, int)
-        assert isinstance(p.tty, str)
-        assert isinstance(p.stat, str)
-        assert isinstance(p.start, str)
-        assert isinstance(p.time, str)
-        assert isinstance(p.command, str)
+def test_required_fields_exist(processes: list[ProcessInfo]) -> None:
+    """Check that all ProcessInfo fields exist and have correct types."""
+    for proc in processes:
+        assert isinstance(proc.user, str)
+        assert isinstance(proc.pid, int)
+        assert isinstance(proc.cpu_percent, float)
+        assert isinstance(proc.mem_percent, float)
+        assert isinstance(proc.vsz, int)
+        assert isinstance(proc.rss, int)
+        assert isinstance(proc.tty, str)
+        assert isinstance(proc.stat, str)
+        assert isinstance(proc.start, str)
+        assert isinstance(proc.time, str)
+        assert isinstance(proc.command, str)
 
 
-def test_pids_are_unique(processes):
-    """Ensure PIDs in the process list are unique."""
-    pids = [p.pid for p in processes]
-    assert len(pids) == len(set(pids)), "Duplicate PIDs found in results"
+def test_pids_are_unique(processes: list[ProcessInfo]) -> None:
+    """Ensure all PIDs in the process list are unique."""
+    pids = [proc.pid for proc in processes]
+    assert len(pids) == len(set(pids)), "Duplicate PIDs found"
 
 
-def test_no_negative_values(processes):
-    """Ensure memory and CPU stats are not negative."""
-    for p in processes:
-        assert p.cpu_percent >= 0
-        assert p.mem_percent >= 0
-        assert p.vsz >= 0
-        assert p.rss >= 0
+def test_no_negative_values(processes: list[ProcessInfo]) -> None:
+    """Ensure CPU, memory, and VSZ/RSS values are non-negative."""
+    for proc in processes:
+        assert proc.cpu_percent >= 0
+        assert proc.mem_percent >= 0
+        assert proc.vsz >= 0
+        assert proc.rss >= 0
 
 
-def test_optional_display(processes):
+def test_optional_display(processes: list[ProcessInfo]) -> None:
     """
-    Pretty print table when running with pytest -s.
-    This does NOT affect pass/fail results.
+    Pretty-print process table for manual inspection.
+    Run with `pytest -s` to see output. Does not affect pass/fail.
     """
     header = (
         f"{'USER':<10} {'PID':<6} {'%CPU':>5} {'%MEM':>5} "
@@ -88,10 +91,40 @@ def test_optional_display(processes):
     )
     print("\n" + header)
     print("-" * len(header))
-
-    for p in processes:
+    for proc in processes:
         print(
-            f"{p.user:>8} {p.pid:>5} {p.cpu_percent:>5.1f} {p.mem_percent:>5.1f} "
-            f"{p.vsz:>8} {p.rss:>8} {p.tty:>7} {p.stat:>5} {p.start:>8} {p.time:>8} "
-            f"{p.command}"
+            f"{proc.user:>8} {proc.pid:>5} {proc.cpu_percent:>5.1f} "
+            f"{proc.mem_percent:>5.1f} {proc.vsz:>8} {proc.rss:>8} "
+            f"{proc.tty:>7} {proc.stat:>5} {proc.start:>8} {proc.time:>8} "
+            f"{proc.command}"
         )
+
+
+def test_against_psutil(processes: list[ProcessInfo]) -> None:
+    """
+    Compare the ProcessInfo list against psutil's process list.
+    Checks that at least the PIDs match and that key fields are reasonable.
+    """
+    # Get psutil PIDs
+    psutil_pids = {p.pid for p in psutil.process_iter(["pid"])}
+
+    # Get PIDs from your ProcessInfo
+    custom_pids = {proc.pid for proc in processes}
+
+    # There should be overlap
+    assert (
+        custom_pids & psutil_pids
+    ), "No PIDs match between populate_process_list() and psutil"
+
+    # Optional: check some fields for one sample process
+    for proc in processes[:5]:  # check first 5 processes
+        try:
+            ps_proc = psutil.Process(proc.pid)
+            # Check CPU and memory percentages are reasonably close
+            cpu_diff = abs(proc.cpu_percent - ps_proc.cpu_percent(interval=0.0))
+            mem_diff = abs(proc.mem_percent - ps_proc.memory_percent())
+            assert cpu_diff < 50, f"CPU mismatch for PID {proc.pid}: {cpu_diff}"
+            assert mem_diff < 50, f"Memory mismatch for PID {proc.pid}: {mem_diff}"
+        except psutil.NoSuchProcess:
+            # process may have terminated; skip
+            continue
