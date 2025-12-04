@@ -9,7 +9,7 @@ Functions:
         Returns the VSZ of the given process in KB.
 """
 
-from process_constants import ProcessStateIndex, ProcStatmIndex, MemInfoIndex
+from process_constants import ProcessStateIndex, ProcStatmIndex
 from file_helpers import read_file
 
 
@@ -33,7 +33,10 @@ def get_process_vsz(pid: int) -> int:
                 vsz_bytes = int(fields[ProcessStateIndex.VSZ])
                 vsz_kb = vsz_bytes // ProcStatmIndex.BYTES_TO_KB
             except ValueError as e:
-                print(f"[ERROR] Invalid VSZ value for PID {pid}: {fields[ProcessStateIndex.VSZ]} ({e})")
+                print(
+                    f"[ERROR] Invalid VSZ value for PID "
+                    f"{pid}: {fields[ProcessStateIndex.VSZ]} ({e})"
+                )
         else:
             print(f"[WARN] Not enough fields in /proc/{pid}/stat to read VSZ")
     else:

@@ -66,7 +66,9 @@ def get_process_tty(pid: int) -> str:
                 tty_nr = int(fields[ProcessStateIndex.TTY_NR])
                 tty_name = read_tty_nr_to_name(tty_nr)
             except ValueError:
-                print(f"[WARN] Invalid TTY_NR value for PID {pid}: {fields[ProcessStateIndex.TTY_NR]}")
+                print(
+                    f"[WARN] Invalid TTY_NR value for PID {pid}: {fields[ProcessStateIndex.TTY_NR]}"
+                )
         else:
             print(f"[WARN] Not enough fields in {stat_path} to read TTY_NR")
     else:

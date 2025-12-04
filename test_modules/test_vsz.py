@@ -12,7 +12,6 @@ Tests are written using pytest and validate that get_process_vsz:
     - Matches psutil's reported virtual memory size (VSZ) for rigorous checking
 """
 
-import os
 import psutil
 from process_util.pids import get_process_pids
 from process_util.vsz import get_process_vsz
@@ -45,4 +44,6 @@ def test_get_process_vsz():
             assert abs(vsz - psutil_vsz) <= 2, f"PID {pid} VSZ mismatch with psutil"
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             # Skip PIDs that have exited or are inaccessible
-            print(f"PID {pid} skipped for psutil comparison (NoSuchProcess/AccessDenied)")
+            print(
+                f"PID {pid} skipped for psutil comparison (NoSuchProcess/AccessDenied)"
+            )

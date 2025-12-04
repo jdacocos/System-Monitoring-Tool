@@ -40,7 +40,9 @@ def _uid_to_username(uid: int) -> str | None:
             try:
                 entry_uid = int(parts[PasswdIndex.UID])
             except ValueError:
-                print(f"Warning: Invalid UID in {passwd_path}: {parts[PasswdIndex.UID]}")
+                print(
+                    f"Warning: Invalid UID in {passwd_path}: {parts[PasswdIndex.UID]}"
+                )
                 continue
             if entry_uid == uid:
                 username = parts[PasswdIndex.NAME]
@@ -71,8 +73,12 @@ def get_process_user(pid: int) -> str | None:
         username = _uid_to_username(process_uid)
 
     except FileNotFoundError:
-        print(f"Error: Process directory {proc_path} not found. PID {pid} may not exist.")
+        print(
+            f"Error: Process directory {proc_path} not found. PID {pid} may not exist."
+        )
     except PermissionError:
-        print(f"Error: Permission denied accessing {proc_path}. Cannot determine owner of PID {pid}.")
+        print(
+            f"Error: Permission denied accessing {proc_path}. Cannot determine owner of PID {pid}."
+        )
 
     return username

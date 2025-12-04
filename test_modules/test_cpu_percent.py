@@ -92,8 +92,10 @@ def test_cpu_percent_cache_behavior():
     assert isinstance(second_call, float)
     assert 0.0 <= second_call <= 100.0
 
-    
-@pytest.mark.xfail(reason="May differ from psutil due to timing and sampling differences")
+
+@pytest.mark.xfail(
+    reason="May differ from psutil due to timing and sampling differences"
+)
 def test_cpu_percent_against_psutil_all_pids():
     """
     Compare CPU percentages from get_process_cpu_percent() against psutil for all PIDs.
@@ -113,7 +115,9 @@ def test_cpu_percent_against_psutil_all_pids():
     for pid in pids:
         try:
             my_cpu = get_process_cpu_percent(pid)
-            ps_cpu = psutil.Process(pid).cpu_percent(interval=0.1)  # short interval for active measurement
+            ps_cpu = psutil.Process(pid).cpu_percent(
+                interval=0.1
+            )  # short interval for active measurement
             print(f"PID {pid}: my_cpu={my_cpu}, psutil={ps_cpu}")
             # Optional: quick sanity check (both floats, reasonable range)
             assert isinstance(my_cpu, float)

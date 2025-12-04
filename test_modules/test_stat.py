@@ -7,7 +7,6 @@ and produces human-readable process STAT strings.
 Tests now compare the results with psutil where applicable.
 """
 
-import os
 import pytest
 import psutil
 from process_util.pids import get_process_pids
@@ -39,7 +38,9 @@ def test_get_process_stat_all_pids():
 
         # Base state
         base_state = stat_str[0]
-        assert base_state in VALID_STATES, f"PID {pid} base state '{base_state}' invalid"
+        assert (
+            base_state in VALID_STATES
+        ), f"PID {pid} base state '{base_state}' invalid"
 
         # Flags
         for c in stat_str[1:]:
@@ -65,7 +66,9 @@ def test_get_process_stat_all_pids():
             }
             ps_base = status_map.get(ps_status.lower(), None)
             if ps_base:
-                assert base_state == ps_base, f"PID {pid}: STAT base '{base_state}' != psutil '{ps_base}'"
+                assert (
+                    base_state == ps_base
+                ), f"PID {pid}: STAT base '{base_state}' != psutil '{ps_base}'"
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             # Skip kernel or inaccessible processes
             continue

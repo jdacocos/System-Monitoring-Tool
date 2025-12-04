@@ -60,11 +60,11 @@ def test_get_process_tty_all_pids():
             ps_proc = psutil.Process(pid)
             ps_tty = ps_proc.terminal()
             ps_tty_str = ps_tty if ps_tty else "?"
-            
+
             # Normalize psutil output to match short-name style
             if ps_tty_str.startswith("/dev/"):
-                ps_tty_str = ps_tty_str[len("/dev/"):]
-    
+                ps_tty_str = ps_tty_str[len("/dev/") :]
+
                 print(f"PID {pid}: psutil TTY = {ps_tty_str}")
 
                 # Allow some flexibility for inaccessible kernel processes

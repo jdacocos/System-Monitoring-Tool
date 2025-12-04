@@ -12,8 +12,6 @@ Only Python standard libraries and helpers from file_helper.py are used.
 """
 
 import os
-from typing import Iterator
-from file_helpers import read_lines
 
 
 def get_process_pids(proc_path: str = "/proc") -> list[int]:

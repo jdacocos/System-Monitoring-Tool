@@ -49,6 +49,7 @@ def read_meminfo_total() -> int:
 
     return mem_total_kb
 
+
 def get_process_rss(pid: int) -> int:
     """
     Returns the resident set size (RSS) of a process in KB.

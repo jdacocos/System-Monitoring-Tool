@@ -28,7 +28,7 @@ from file_helpers import read_file
 _STAT_CACHE: dict[int, str] = {}
 
 
-def _read_process_stat_fields(pid: int) -> list[str]:
+def read_process_stat_fields(pid: int) -> list[str]:
     """Read /proc/<pid>/stat and return fields as a list of strings."""
     stat_path = f"/proc/{pid}/stat"
     content = read_file(stat_path)
@@ -122,7 +122,7 @@ def get_process_stat(pid: int) -> str:
     Return human-readable process stat string with caching for sleeping processes.
     Combines base state and flags for session, priority, locked memory, threads, and foreground.
     """
-    fields = _read_process_stat_fields(pid)
+    fields = read_process_stat_fields(pid)
     if not fields:
         return StatMapIndex.DEFAULT_STAT
 

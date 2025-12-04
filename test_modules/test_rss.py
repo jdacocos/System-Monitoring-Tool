@@ -11,7 +11,6 @@ Tests are written using pytest and include:
     - Direct comparison with psutil for all PIDs
 """
 
-import os
 import pytest
 import psutil
 from process_util.pids import get_process_pids
@@ -62,7 +61,7 @@ def test_rss_against_psutil_all_pids():
                 failed.append((pid, rss_kb, psutil_rss_kb))
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue
-    
+
     if failed:
         print(f"RSS comparison failed for {len(failed)} PIDs:")
         for pid, rss, ps_rss in failed:

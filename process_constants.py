@@ -13,6 +13,7 @@ These constants help prevent magic numbers and improve code readability.
 
 # pylint: disable=too-few-public-methods
 
+
 class ProcessStateIndex:
     """
     Constants representing the indices of fields in /proc/<pid>/stat.

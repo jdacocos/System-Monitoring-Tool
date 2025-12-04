@@ -22,7 +22,6 @@ Notes:
 """
 
 import os
-from typing import Optional
 from process_constants import CpuStatIndex, ProcessStateIndex
 from file_helpers import read_lines, read_file
 
@@ -118,10 +117,12 @@ def get_process_cpu_percent(pid: int) -> float:
 
         if delta_total > CpuStatIndex.MIN_DELTA_TOTAL:
             core_count = os.cpu_count() or CpuStatIndex.CPU_DEFAULT_COUNT
-            cpu_percent = (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE / core_count
+            cpu_percent = (
+                (delta_proc / delta_total) * CpuStatIndex.CPU_PERCENT_SCALE / core_count
+            )
             cpu_percent = min(
                 max(cpu_percent, CpuStatIndex.CPU_PERCENT_INVALID),
-                CpuStatIndex.CPU_PERCENT_SCALE
+                CpuStatIndex.CPU_PERCENT_SCALE,
             )
             cpu_percent = round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)
 
@@ -130,6 +131,7 @@ def get_process_cpu_percent(pid: int) -> float:
     _LAST_TOTAL_JIFFIES[pid] = total_jiffies_current
 
     return cpu_percent
+
 
 def reset_cpu_cache() -> None:
     """
