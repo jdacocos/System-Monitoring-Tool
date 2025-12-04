@@ -38,7 +38,7 @@ def read_process_stat_fields(pid: int) -> list[str]:
     return content.split()
 
 
-def _base_state(fields: list[str]) -> str:
+def base_state(fields: list[str]) -> str:
     """Return the main process state character (R, S, D, etc.)."""
     try:
         return StatMapIndex.STATE_MAP.get(
@@ -126,7 +126,7 @@ def get_process_stat(pid: int) -> str:
     if not fields:
         return StatMapIndex.DEFAULT_STAT
 
-    base_state = _base_state(fields)
+    base_state = base_state(fields)
 
     # Use cache for sleeping, disk sleep, or zombie processes
     if base_state in ("S", "D", "Z") and pid in _STAT_CACHE:

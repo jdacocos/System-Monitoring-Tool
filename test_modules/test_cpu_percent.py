@@ -24,7 +24,7 @@ import psutil
 from process_util.pids import get_process_pids
 from process_util.cpu_percent import (
     _read_proc_stat_total,
-    _read_proc_pid_time,
+    read_proc_pid_time,
     get_process_cpu_percent,
     reset_cpu_cache,
 )
@@ -45,7 +45,7 @@ def test_read_proc_pid_time():
         pytest.skip("No PIDs found on system")
 
     pid = pids[0]
-    jiffies = _read_proc_pid_time(pid)
+    jiffies = read_proc_pid_time(pid)
     print(f"PID {pid} total jiffies: {jiffies}")
     assert isinstance(jiffies, int)
     assert jiffies >= 0

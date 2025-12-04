@@ -1,60 +1,57 @@
 """
 test_command.py
 
-This module contains unit tests for the `command.py` module, which provides
-a function to retrieve the full command line (COMMAND) of processes
-on a Linux system.
-
-Tests are written using the pytest framework and validate that
-`get_process_command`:
-
-    - Returns a string for each PID
-    - Handles non-existent or inaccessible processes gracefully
-    - Returns non-empty strings for normal user processes
-    - Handles kernel threads and empty cmdline cases properly
-
-The tests iterate over all processes listed in `/proc` to ensure
-robustness across a variety of system processes.
-
-Requirements:
-    pytest
+Unit tests for process_util.command.get_process_command, comparing output
+against psutil for all PIDs.
 """
 
+import re
+import pytest
+import psutil
 from process_util.command import get_process_command
 from process_util.pids import get_process_pids
 
 
-def test_get_process_command():
-    """
-    Test that get_process_command returns a valid string for all PIDs in /proc.
+def _normalize_cmd(cmd: str) -> str:
+    """Normalize a command string for comparison: strip and collapse spaces."""
+    if not cmd:
+        return ""
+    return re.sub(r"\s+", " ", cmd.strip())
 
-    Special cases:
-        - '[PID not found]' if the PID disappears during the test
-        - '[Permission denied]' if we can't read the process
-        - '[zombie]' for zombie processes
-        - '[kthread: <name>]' for kernel threads with empty cmdline
+
+def test_get_process_command_vs_psutil():
+    """
+    Compare `get_process_command` against psutil for all PIDs.
+
+    Validates that:
+        - Normal user processes return matching command lines
+        - Kernel threads, zombies, and inaccessible PIDs return expected placeholders
+        - Leading/trailing and multiple spaces are normalized before comparison
+        - Special cases like '[PID not found]' or '[Permission denied]' are handled gracefully
     """
 
     pids = get_process_pids()
-    assert pids, "No PIDs found on this system to test get_process_command"
+    if not pids:
+        pytest.skip("No PIDs found on this system to test get_process_command.")
 
     for pid in sorted(pids):
-        cmd = get_process_command(pid)
-        print(f"PID {pid} COMMAND: '{cmd}'")
+        our_cmd = _normalize_cmd(get_process_command(pid))
+        print(f"PID {pid} COMMAND: '{our_cmd}'")
 
-        # Must always be a string
-        assert isinstance(cmd, str), f"PID {pid} returned non-string: {cmd}"
-
-        # Allow placeholders for special cases
-        if cmd in ("[PID not found]", "[Permission denied]", "[zombie]"):
+        if our_cmd in ("[PID not found]", "[Permission denied]", "[zombie]"):
             continue
 
-        if cmd.startswith("[kthread:"):
-            # Should include the kernel thread name
-            assert (
-                len(cmd) > 10
-            ), f"PID {pid} returned malformed kernel thread command: {cmd}"
-            continue
+        try:
+            ps_proc = psutil.Process(pid)
+            ps_cmd_list = ps_proc.cmdline()
+            ps_cmd = " ".join(ps_cmd_list) if ps_cmd_list else f"[{ps_proc.name()}]"
+            ps_cmd = _normalize_cmd(ps_cmd)
 
-        # Normal user processes must have at least one character in the command
-        assert len(cmd) > 0, f"PID {pid} returned empty command"
+        except psutil.NoSuchProcess:
+            ps_cmd = "[PID not found]"
+        except psutil.AccessDenied:
+            ps_cmd = "[Permission denied]"
+        except Exception:
+            ps_cmd = "[error]"
+
+        assert our_cmd == ps_cmd, f"PID {pid} mismatch: '{our_cmd}' vs '{ps_cmd}'"
