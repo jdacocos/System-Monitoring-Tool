@@ -15,7 +15,7 @@ All data is retrieved using system calls or by parsing kernal files.
 import time
 import os
 from collections import namedtuple
-from utilities import read_file
+from backend.file_helpers import read_file
 
 cpufreq = namedtuple("cpufreq", ["current", "min", "max"])
 

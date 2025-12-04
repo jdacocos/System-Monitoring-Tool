@@ -10,13 +10,16 @@ from frontend.utils.ui_helpers import (
     format_bytes,
 )
 from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
-
+from backend.memory_info import (
+    get_virtual_memory,
+    get_swap_memory,
+)
 
 def get_memory_stats() -> dict:
     """Fetch memory and swap usage statistics."""
 
-    mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
+    mem = get_virtual_memory()
+    swap = get_swap_memory()
     return {"mem": mem, "swap": swap}
 
 

@@ -10,7 +10,7 @@ Features:
 """
 
 from collections import namedtuple
-from utilities import read_file
+from backend.file_helpers import read_file
 
 vmem = namedtuple(
     "vmem",
