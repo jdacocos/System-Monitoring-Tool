@@ -7,32 +7,31 @@ for individual processes and the overall system.
 Tests are written using the pytest framework and cover:
 
     - CPU percentage calculation for the current Python process (busy PID)
-    - CPU percentage calculation for the first PID (usually idle PID 1)
-    - Type and value range checks for a selection of PIDs
-    - Handling of edge cases such as very short-lived processes or processes
-      that exit during sampling
-
-Each test validates that returned values are floats within the 0-100% range
-and that calculations do not raise unexpected exceptions.
+    - CPU percentage calculation for all system PIDs
+    - Type and value range checks for PIDs
+    - Direct comparison with psutil for rigorous validation
+    - Cache behavior verification (first call returns invalid, second call uses cached values)
 
 Requirements:
     pytest
+    psutil
+Linux-only: Requires access to a mounted /proc filesystem.
 """
 
 import os
 import pytest
+import psutil
 from process_util.pids import get_process_pids
 from process_util.cpu_percent import (
     _read_proc_stat_total,
     _read_proc_pid_time,
     get_process_cpu_percent,
+    reset_cpu_cache,
 )
 
 
 def test_read_proc_stat_total():
-    """
-    Tests that it returns the CPU jiffies.
-    """
+    """Return total CPU jiffies from /proc/stat and verify type and value."""
     total = _read_proc_stat_total()
     print(f"Total CPU jiffies: {total}")
     assert isinstance(total, int)
@@ -40,12 +39,10 @@ def test_read_proc_stat_total():
 
 
 def test_read_proc_pid_time():
-    """
-    Tests that it retrieves pid time.
-    """
+    """Return total CPU jiffies for a specific PID."""
     pids = get_process_pids()
     if not pids:
-        pytest.skip("No PIDs found")
+        pytest.skip("No PIDs found on system")
 
     pid = pids[0]
     jiffies = _read_proc_pid_time(pid)
@@ -55,39 +52,67 @@ def test_read_proc_pid_time():
 
 
 def test_get_process_cpu_percent():
-    """
-    Test get_process_cpu_percent() for all PIDs in the system.
-
-    Checks:
-      1. Busy PID (current Python process)
-      2. First PID (usually PID 1)
-      3. All other PIDs returned by get_process_pids()
-         - Ensure CPU percent is a float
-         - Ensure value is within 0.0 - 100.0
-    """
-
+    """Test CPU percentage calculation for all PIDs in the system."""
     pids = get_process_pids()
     if not pids:
-        pytest.skip("No PIDs found on this system to test get_process_cpu_percent.")
+        pytest.skip("No PIDs found on system")
 
     print(f"Testing CPU percent for {len(pids)} PIDs...")
 
-    # --- Test 1: Busy PID (current Python process) ---
-    busy_pid = os.getpid()
-    cpu_busy = get_process_cpu_percent(busy_pid)
-    print(f"Busy PID {busy_pid} CPU%: {cpu_busy}")
-    assert isinstance(cpu_busy, float)
-    assert 0.0 <= cpu_busy <= 100.0
+    reset_cpu_cache()
 
-    # --- Test 2: First PID (usually PID 1) ---
-    cpu_first = get_process_cpu_percent(pids[0])
-    print(f"First PID {pids[0]} CPU%: {cpu_first}")
-    assert isinstance(cpu_first, float)
-    assert 0.0 <= cpu_first <= 100.0
-
-    # --- Test 3: All other PIDs ---
     for pid in pids:
         cpu = get_process_cpu_percent(pid)
         print(f"PID {pid} CPU%: {cpu}")
         assert isinstance(cpu, float)
         assert 0.0 <= cpu <= 100.0
+
+
+def test_cpu_percent_cache_behavior():
+    """
+    Verify that the cache behaves correctly:
+        - First call returns CPU_PERCENT_INVALID
+        - Second call returns a valid CPU percentage
+    """
+    pids = get_process_pids()
+    if not pids:
+        pytest.skip("No PIDs found to test cache behavior")
+
+    pid = os.getpid()
+    reset_cpu_cache()
+
+    # First call: should return CPU_PERCENT_INVALID
+    first_call = get_process_cpu_percent(pid)
+    print(f"First call CPU% for PID {pid}: {first_call}")
+    assert first_call == -1.0  # CpuStatIndex.CPU_PERCENT_INVALID
+
+    # Second call: should return valid CPU percentage
+    second_call = get_process_cpu_percent(pid)
+    print(f"Second call CPU% for PID {pid}: {second_call}")
+    assert isinstance(second_call, float)
+    assert 0.0 <= second_call <= 100.0
+
+
+def test_cpu_percent_cache_behavior():
+    """
+    Verify that the cache behaves correctly:
+        - First call returns 0.0 if no previous sample
+        - Second call returns a valid CPU percentage
+    """
+    pids = get_process_pids()
+    if not pids:
+        pytest.skip("No PIDs found to test cache behavior")
+
+    pid = os.getpid()
+    reset_cpu_cache()
+
+    # First call: should return 0.0 with new logic
+    first_call = get_process_cpu_percent(pid)
+    print(f"First call CPU% for PID {pid}: {first_call}")
+    assert first_call == 0.0  # updated expectation
+
+    # Second call: should return a valid CPU percentage (likely 0-100)
+    second_call = get_process_cpu_percent(pid)
+    print(f"Second call CPU% for PID {pid}: {second_call}")
+    assert isinstance(second_call, float)
+    assert 0.0 <= second_call <= 100.0

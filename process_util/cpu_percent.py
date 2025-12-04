@@ -48,7 +48,7 @@ def _read_proc_stat_total() -> int:
 
     first_line = lines[0]
     if not first_line.startswith("cpu "):
-        print("fError: {stat_path} first line does not start with 'cpu '")
+        print(f"Error: {stat_path} first line does not start with 'cpu '")
         return 0
 
     fields = first_line.split()
@@ -106,6 +106,7 @@ def get_process_cpu_percent(pid: int) -> float:
         float: CPU usage percentage for the process. Returns CpuStatIndex.CPU_PERCENT_INVALID
                if previous readings are missing, the process does not exist, or delta is too small.
     """
+
     cpu_percent = CpuStatIndex.CPU_PERCENT_INVALID
 
     proc_jiffies_current = _read_proc_pid_time(pid)
@@ -124,12 +125,11 @@ def get_process_cpu_percent(pid: int) -> float:
             )
             cpu_percent = round(cpu_percent, CpuStatIndex.CPU_PERCENT_ROUND_DIGITS)
 
-    # update caches
+    # update caches **after calculating or deciding on invalid**
     _LAST_PROC_JIFFIES[pid] = proc_jiffies_current
     _LAST_TOTAL_JIFFIES[pid] = total_jiffies_current
 
     return cpu_percent
-
 
 def reset_cpu_cache() -> None:
     """
