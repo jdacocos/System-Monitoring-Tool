@@ -1,44 +1,39 @@
 """
-process_util
+pids.py
 
-A modular Linux process inspection package backed by the /proc file system.
+This module provides functions for retrieving process IDs (PIDs) on a Linux
+system using the /proc filesystem.
 
-Each module in this package is dedicated to retrieving *one* specific
-attribute of a process (PID, CPU%, memory usage, runtime, owner, etc.).
-This design promotes separation of concerns, testability, and
-maintainability.
+Functions:
+    get_process_pids() -> list[int]
+        Returns a list of all currently running process IDs.
 
-These utilities are intended to be composed by the ProcessInfo
-dataclass in process.py, forming a complete snapshot of a process
-similar to the output of 'ps aux'.
-
-Only Python standard library os is used.
+Only Python standard libraries and helpers from file_helper.py are used.
 """
 
 import os
 from typing import Iterator
-from process_constants import LNX_FS
+from file_helpers import read_lines
 
 
-def open_file_system(path=LNX_FS) -> Iterator[os.DirEntry]:
-    """
-    Return an iterator over entries in the /proc file system.
-
-    If the path cannot be opened, an empty iterator is returned.
-    """
-    try:
-        return os.scandir(path)
-    except FileNotFoundError:
-        return iter([])
-
-
-def get_process_pids() -> list[int]:
+def get_process_pids(proc_path: str = "/proc") -> list[int]:
     """
     Return a list of all running process IDs (PIDs) found in /proc.
+
+    Parameters:
+        proc_path (str): Path to the proc filesystem. Defaults to "/proc".
+
+    Returns:
+        list[int]: List of PIDs as integers. Returns empty list if /proc cannot be read.
     """
     pids: list[int] = []
-    with open_file_system() as entries:
+
+    try:
+        entries = os.listdir(proc_path)
         for entry in entries:
-            if entry.name.isdigit():
-                pids.append(int(entry.name))
+            if entry.isdigit():
+                pids.append(int(entry))
+    except (FileNotFoundError, PermissionError) as e:
+        print(f"Warning: Cannot read {proc_path}: {e}")
+
     return pids

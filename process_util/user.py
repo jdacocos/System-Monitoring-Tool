@@ -14,7 +14,8 @@ The module only uses standard libraries: os, typing.
 """
 
 import os
-from process_constants import RD_ONLY, UTF_8, PasswdIndex
+from process_constants import PasswdIndex
+from helpers.file_helper import read_file
 
 
 def _uid_to_username(uid: int) -> str | None:
@@ -27,33 +28,24 @@ def _uid_to_username(uid: int) -> str | None:
     Returns:
         str | None: Username if found, otherwise None.
     """
-
-    username = None
+    username: str | None = None
     passwd_path = "/etc/passwd"
 
-    try:
-        with open(passwd_path, RD_ONLY, encoding=UTF_8) as f:
-            for line in f:
-                parts = line.strip().split(":")
-                if len(parts) <= PasswdIndex.UID:
-                    continue
-                try:
-                    entry_uid = int(parts[PasswdIndex.UID])
-                except ValueError:
-                    print(
-                        f"Warning: Invalid UID in {passwd_path}: {parts[PasswdIndex.UID]}"
-                    )
-                    continue
-                if entry_uid == uid:
-                    username = parts[PasswdIndex.NAME]
-                    break
-    except FileNotFoundError:
-        print(f"Error: {passwd_path} not found. Cannot resolve UID {uid}.")
-    except PermissionError:
-        print(
-            f"Error: Permission denied while reading {passwd_path}. "
-            f"Cannot resolve UID {uid}."
-        )
+    data = read_file(passwd_path)
+    if data is not None:
+        for line in data.splitlines():
+            parts = line.strip().split(":")
+            if len(parts) <= PasswdIndex.UID:
+                continue
+            try:
+                entry_uid = int(parts[PasswdIndex.UID])
+            except ValueError:
+                print(f"Warning: Invalid UID in {passwd_path}: {parts[PasswdIndex.UID]}")
+                continue
+            if entry_uid == uid:
+                username = parts[PasswdIndex.NAME]
+                break
+
     return username
 
 
@@ -67,9 +59,8 @@ def get_process_user(pid: int) -> str | None:
     Returns:
         str | None: Username if found, otherwise None.
     """
-
-    proc_path = f"/proc/{pid}"
     username: str | None = None
+    proc_path = f"/proc/{pid}"
 
     try:
         # Get file status of the process directory to retrieve UID
@@ -80,12 +71,8 @@ def get_process_user(pid: int) -> str | None:
         username = _uid_to_username(process_uid)
 
     except FileNotFoundError:
-        print(
-            f"Error: Process directory {proc_path} not found. PID {pid} may not exist."
-        )
+        print(f"Error: Process directory {proc_path} not found. PID {pid} may not exist.")
     except PermissionError:
-        print(
-            f"Error: Permission denied accessing {proc_path}. "
-            f"Cannot determine owner of PID {pid}."
-        )
+        print(f"Error: Permission denied accessing {proc_path}. Cannot determine owner of PID {pid}.")
+
     return username

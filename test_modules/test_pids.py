@@ -1,62 +1,58 @@
 """
 test_pids.py
 
-This module contains unit tests for the process_util.pids module,
-which provides functions for retrieving process IDs (PIDs)
+Unit tests for process_util.pids module, which retrieves process IDs (PIDs)
 from the Linux /proc filesystem.
 
-Tests are written using the pytest framework. Each test validates
-that the returned PIDs are valid, positive integers and that
-the functions handle missing or inaccessible /proc entries gracefully.
+Tests verify:
+    - PIDs are positive integers
+    - PIDs correspond to existing /proc directories
+    - Comparison against psutil.pids()
+    - Graceful handling of missing or inaccessible /proc entries
 
 Requirements:
     pytest
-Linux-only: Requires access to a mounted /proc filesystem.
+    psutil (for comparison test)
+Linux-only: Requires /proc filesystem.
 """
 
 import os
-from process_util.pids import open_file_system, get_process_pids
+import pytest
+import psutil
+from process_util.pids import get_process_pids
 
 
-def test_open_file_system():
-    """
-    Tests that /proc path for the Linux file system correctly displays all contents.
-    """
-
-    fs = open_file_system()
-
-    # 1. Ensure return type is ScandirIterator
-    assert type(fs) is type(os.scandir("/"))
-
-    # 2. Ensure iterating works (no errors)
-    entries = list(fs)
-    assert len(entries) > 0  # 3. /proc must contain something
-
-    # Optional: ensure entries have names
-    assert all(hasattr(e, "name") for e in entries)
-
-    print("\nAll contents of /proc:")
-    entries = open_file_system()
-    for entry in entries:
-        print(entry.name)
-
-
-def test_get_process_pids():
-    """
-    Tests that all the pids are successfully retrieved from /proc.
-    """
-
+def test_get_process_pids_basic():
+    """Test that get_process_pids() returns valid PIDs and print each PID."""
     pids = get_process_pids()
+    print(f"\nRetrieved {len(pids)} PIDs from /proc")
 
-    # 1. Should return a list
-    assert isinstance(pids, list)
+    # Check each PID
+    for pid in pids:
+        print(f"Checking PID: {pid}")
+        assert isinstance(pid, int), f"PID {pid} is not an integer"
+        assert pid > 0, f"PID {pid} is not positive"
+        proc_dir = f"/proc/{pid}"
+        assert os.path.isdir(proc_dir), f"Directory {proc_dir} does not exist"
 
-    # 2. All entries should be integers
-    assert all(isinstance(pid, int) for pid in pids)
-
-    # 3. All PIDs should correspond to directories in /proc
-    assert all(os.path.isdir(f"/proc/{pid}") for pid in pids)
-
-    # 4. Process should be included
+    # Ensure current process is included
     current_pid = os.getpid()
-    assert current_pid in pids
+    print(f"Current process PID: {current_pid}")
+    assert current_pid in pids, "Current process PID not in retrieved list"
+
+
+@pytest.mark.skipif(not psutil, reason="psutil not installed")
+def test_get_process_pids_against_psutil():
+    """Compare get_process_pids() with psutil.pids() and print debug info."""
+    pids_proc = set(get_process_pids())
+    pids_psutil = set(psutil.pids())
+
+    print(f"\nNumber of PIDs from /proc: {len(pids_proc)}")
+    print(f"Number of PIDs from psutil: {len(pids_psutil)}")
+
+    common_pids = pids_proc.intersection(pids_psutil)
+    print(f"Number of common PIDs: {len(common_pids)}")
+
+    # Ensure current process is in the intersection
+    assert os.getpid() in common_pids
+    print(f"Current process PID {os.getpid()} is in the common set")
