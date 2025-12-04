@@ -1,5 +1,4 @@
 import curses
-import psutil
 import time
 
 from frontend.utils.ui_helpers import (

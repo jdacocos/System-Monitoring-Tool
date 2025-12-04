@@ -1,6 +1,5 @@
 import curses
 from collections import deque
-import psutil
 import time
 
 from frontend.utils.ui_helpers import (
