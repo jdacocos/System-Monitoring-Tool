@@ -1,5 +1,15 @@
 """
-Get CPU information
+cpu_info.py
+
+Provides functions to retrieve CPU information on Linux systems.
+
+Features:
+- Logical CPU count
+- Physical CPU count
+- Current CPU frequency
+- Per-core CPU usage and percentage over a time interval
+
+All data is retrieved using system calls or by parsing kernal files.
 """
 
 import time
@@ -9,14 +19,16 @@ from utilities import read_file
 
 cpufreq = namedtuple("cpufreq", ["current", "min", "max"])
 
+
 # ==================== CPU Counts ==================== #
+
 
 def get_logical_cpu_count() -> int:
     """
     Counts the number of logical cpu's in the system by calling on the
     cpu_count system call wrapper.
     """
-    
+
     return os.cpu_count()
 
 
@@ -29,7 +41,7 @@ def get_physical_cpu_count() -> int | None:
     physical id -> one CPU socket.
     core id -> one core within that socket.
     """
-    
+
     # set of unique (physical id, core id) pairs
     phys_core_pairs = set()
 
@@ -39,12 +51,12 @@ def get_physical_cpu_count() -> int | None:
     cpuinfo = read_file("/proc/cpuinfo")
 
     for line in cpuinfo.splitlines():
-        
+
         # find "physical id" and store it
         if line.startswith("physical id"):
             phys_id = int(line.split(":")[1])
-            
-        # find "core id" and store it 
+
+        # find "core id" and store it
         if line.startswith("core id"):
             core_id = int(line.split(":")[1])
 
@@ -75,7 +87,7 @@ def get_cpu_freq() -> cpufreq | None:
         if "cpu MHz" in line:
             try:
                 curr = float(line.split(":")[1].strip())
-            except:
+            except ValueError:
                 curr = None
             break
 
@@ -89,7 +101,7 @@ def get_cpu_freq() -> cpufreq | None:
 
 
 def read_proc_stat() -> list[str]:
-    """ 
+    """
     Reads /proc/stat.
     Returns only the lines that describe CPU usage.
     """
@@ -99,20 +111,20 @@ def read_proc_stat() -> list[str]:
 
 
 def parse_cpu_line(line: str) -> list[int]:
-    """ 
+    """
     Parses a single CPU line from /proc/stat.
     Returns a list of integer CPU time fields for that core.
     """
 
     parts = line.split()
-    
+
     # skips the label (e.g. cpu0) and converts the remaining fields to integers
     return list(map(int, parts[1:]))
 
 
 def cpu_totals() -> list[tuple[int, int]]:
     """
-    Calculates the total and idle time for each CPU core. 
+    Calculates the total and idle time for each CPU core.
     Returns a list of (total_time, idle_time) tuples.
     """
 
