@@ -20,7 +20,7 @@ Dependencies:
 """
 
 from process_constants import MemInfoIndex
-from process_util.rss import get_process_rss, _read_meminfo_total
+from process_util.rss import get_process_rss, read_meminfo_total
 
 
 def get_process_mem_percent(pid: int) -> float:
@@ -34,7 +34,7 @@ def get_process_mem_percent(pid: int) -> float:
         float: Memory usage percent (0.0 - 100.0)
     """
     rss_kb = get_process_rss(pid)
-    total_mem_kb = _read_meminfo_total()
+    total_mem_kb = read_meminfo_total()
 
     # check division by zero or invalid total memory
     if total_mem_kb <= MemInfoIndex.MEM_INVALID:

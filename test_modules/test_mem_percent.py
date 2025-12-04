@@ -1,56 +1,76 @@
 """
 test_mem_percent.py
 
-This module contains unit tests for mem_percent.py, which provides
-functions for calculating process memory usage as a percentage
-of total system memory.
+Unit tests for mem_percent.py, which calculates process memory usage
+as a percentage of total system memory.
 
 Tests are written using the pytest framework. Each test validates:
 
 - That get_process_mem_percent(pid) returns a float.
-- The returned memory percentage is within the expected range (0.0 - 100.0).
-- The function behaves correctly for multiple processes, including
-  edge cases like PIDs that may no longer exist or system processes.
+- Returned memory percentage is within the expected range (0.0 - 100.0).
+- Comparison with psutil for rigorous validation.
+- Handles multiple PIDs and edge cases gracefully.
 
 Requirements:
     pytest
+    psutil
+Linux-only: Requires access to /proc filesystem.
 """
 
 import os
+import psutil
+import pytest
 from process_util.pids import get_process_pids
 from process_util.mem_percent import get_process_mem_percent
 
 
-def test_get_process_mem_percent():
-    """
-    Test get_process_mem_percent() with:
-      1. Busy PID (current Python process)
-      2. First PID (usually idle PID 1)
-      3. A few PIDs to check type and range
-    """
+def test_get_process_mem_percent_basic():
+    """Test get_process_mem_percent for busy PID and first PID."""
     pids = get_process_pids()
-    print(f"Found PIDs: {pids[:10]}...")  # only print first 10 to avoid flooding
     assert pids, "No PIDs found to test memory percent"
 
-    # --- Test 1: Busy PID ---
-    busy_pid = os.getpid()  # PID of this Python process
+    # Busy PID (current Python process)
+    busy_pid = os.getpid()
     mem_busy = get_process_mem_percent(busy_pid)
     print(f"Memory percent for busy PID {busy_pid}: {mem_busy}%")
-    assert isinstance(mem_busy, float), "Memory percent should be a float"
-    assert 0.0 <= mem_busy <= 100.0, "Memory percent should be between 0 and 100"
+    assert isinstance(mem_busy, float)
+    assert 0.0 <= mem_busy <= 100.0
 
-    # --- Test 2: First PID (likely idle) ---
-    first_pid = pids[0] if pids else 1
+    # First PID (likely idle)
+    first_pid = pids[0]
     mem_first = get_process_mem_percent(first_pid)
     print(f"Memory percent for first PID {first_pid}: {mem_first}%")
-    assert isinstance(mem_first, float), "Memory percent should be a float"
-    assert 0.0 <= mem_first <= 100.0, "Memory percent should be between 0 and 100"
+    assert isinstance(mem_first, float)
+    assert 0.0 <= mem_first <= 100.0
 
-    # --- Test 3: Loop over all PIDs from ps aux ---
+
+def test_get_process_mem_percent_all_pids_psutil():
+    """
+    Test get_process_mem_percent against psutil for all PIDs.
+    Prints all comparisons and asserts that values are within reasonable limits.
+    """
+    pids = get_process_pids()
+    assert pids, "No PIDs found to test memory percent"
+
+    total_mem_bytes = psutil.virtual_memory().total
+
     for pid in pids:
-        mem = get_process_mem_percent(pid)
-        print(f"PID {pid} Memory: {mem}%")
-        assert isinstance(mem, float), f"Memory percent for PID {pid} should be a float"
-        assert (
-            0.0 <= mem <= 100.0
-        ), f"Memory percent for PID {pid} should be between 0 and 100"
+        try:
+            proc = psutil.Process(pid)
+            rss_bytes = proc.memory_info().rss
+            ps_mem_percent = (rss_bytes / total_mem_bytes) * 100
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            ps_mem_percent = None
+
+        mem_percent = get_process_mem_percent(pid)
+        print(f"PID {pid}: my_mem={mem_percent}%, psutil_mem={ps_mem_percent}%")
+
+        # Only assert when psutil value exists
+        if ps_mem_percent is not None:
+            assert isinstance(mem_percent, float)
+            assert 0.0 <= mem_percent <= 100.0
+            # allow small differences due to rounding and sampling
+            assert abs(mem_percent - ps_mem_percent) <= 2.0, (
+                f"PID {pid} memory percent differs from psutil: "
+                f"{mem_percent}% vs {ps_mem_percent}%"
+            )
