@@ -71,31 +71,6 @@ def test_get_process_cpu_percent():
 def test_cpu_percent_cache_behavior():
     """
     Verify that the cache behaves correctly:
-        - First call returns CPU_PERCENT_INVALID
-        - Second call returns a valid CPU percentage
-    """
-    pids = get_process_pids()
-    if not pids:
-        pytest.skip("No PIDs found to test cache behavior")
-
-    pid = os.getpid()
-    reset_cpu_cache()
-
-    # First call: should return CPU_PERCENT_INVALID
-    first_call = get_process_cpu_percent(pid)
-    print(f"First call CPU% for PID {pid}: {first_call}")
-    assert first_call == -1.0  # CpuStatIndex.CPU_PERCENT_INVALID
-
-    # Second call: should return valid CPU percentage
-    second_call = get_process_cpu_percent(pid)
-    print(f"Second call CPU% for PID {pid}: {second_call}")
-    assert isinstance(second_call, float)
-    assert 0.0 <= second_call <= 100.0
-
-
-def test_cpu_percent_cache_behavior():
-    """
-    Verify that the cache behaves correctly:
         - First call returns 0.0 if no previous sample
         - Second call returns a valid CPU percentage
     """
@@ -116,3 +91,35 @@ def test_cpu_percent_cache_behavior():
     print(f"Second call CPU% for PID {pid}: {second_call}")
     assert isinstance(second_call, float)
     assert 0.0 <= second_call <= 100.0
+
+    
+@pytest.mark.xfail(reason="May differ from psutil due to timing and sampling differences")
+def test_cpu_percent_against_psutil_all_pids():
+    """
+    Compare CPU percentages from get_process_cpu_percent() against psutil for all PIDs.
+
+    Notes:
+        - Marked xfail because discrepancies are expected for very short-lived
+          processes or due to small sampling intervals.
+        - Prints results for manual inspection.
+    """
+    pids = get_process_pids()
+    if not pids:
+        pytest.skip("No PIDs found to compare against psutil")
+
+    print(f"Comparing CPU percent for {len(pids)} PIDs with psutil...")
+    reset_cpu_cache()
+
+    for pid in pids:
+        try:
+            my_cpu = get_process_cpu_percent(pid)
+            ps_cpu = psutil.Process(pid).cpu_percent(interval=0.1)  # short interval for active measurement
+            print(f"PID {pid}: my_cpu={my_cpu}, psutil={ps_cpu}")
+            # Optional: quick sanity check (both floats, reasonable range)
+            assert isinstance(my_cpu, float)
+            assert 0.0 <= my_cpu <= 100.0
+            assert isinstance(ps_cpu, float)
+            assert 0.0 <= ps_cpu <= 100.0
+        except (psutil.NoSuchProcess, PermissionError):
+            # Some PIDs may vanish or be inaccessible
+            print(f"Skipping PID {pid}: no longer exists or permission denied")
