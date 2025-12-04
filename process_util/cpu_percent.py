@@ -64,7 +64,7 @@ def _read_proc_stat_total() -> int:
     return total_jiffies
 
 
-def _read_proc_pid_time(pid: int) -> int:
+def read_proc_pid_time(pid: int) -> int:
     """
     Return the total CPU jiffies (utime + stime) used by a specific process.
 
@@ -108,7 +108,7 @@ def get_process_cpu_percent(pid: int) -> float:
 
     cpu_percent = CpuStatIndex.CPU_PERCENT_INVALID
 
-    proc_jiffies_current = _read_proc_pid_time(pid)
+    proc_jiffies_current = read_proc_pid_time(pid)
     total_jiffies_current = _read_proc_stat_total()
 
     if pid in _LAST_PROC_JIFFIES and pid in _LAST_TOTAL_JIFFIES:

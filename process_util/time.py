@@ -5,31 +5,19 @@ This module provides functions to retrieve and format the total CPU time of a pr
 in a style consistent with the 'TIME' column of the `ps aux` command.
 
 Functions:
-    _format_time_column(total_seconds: float) -> str
-        Helper function to convert total CPU time in seconds into a ps-style TIME string.
-        Formats:
-            - M:SS          for durations less than 1 hour
-            - H:MM:SS       for durations of 1 hour or more
-            - D-HH:MM:SS    for durations of 1 day or more
-
+    format_time_column(total_seconds: float) -> str
+        Convert total CPU time in seconds into a ps-style TIME string.
     get_process_time(pid: int) -> str
         Returns the total CPU time consumed by a process formatted as '[[dd-]hh:]mm:ss'.
-        Handles unreadable or non-existent processes gracefully by returning '0:00'.
-
-Notes:
-    - The TIME column represents cumulative CPU usage, not wall-clock time.
-    - Uses /proc/<pid>/stat to retrieve user and system CPU jiffies for the process.
-    - Converts jiffies to seconds using system clock ticks (SC_CLK_TCK).
 """
 
 import os
 from process_constants import TimeFormatIndex
-from process_util.cpu_percent import _read_proc_pid_time
+from process_util.cpu_percent import read_proc_pid_time
 
 
-def _format_time_column(total_seconds: float) -> str:
+def format_time_column(total_seconds: float) -> str:
     """
-    Helper:
     Convert total CPU time in seconds into ps aux TIME format:
         - M:SS for <1 hour
         - H:MM:SS for >=1 hour
@@ -63,9 +51,9 @@ def get_process_time(pid: int) -> str:
     Returns:
         str: CPU time as '[[dd-]hh:]mm:ss', or default '0:00' if unreadable
     """
-    total_jiffies = _read_proc_pid_time(pid)
+    total_jiffies = read_proc_pid_time(pid)
     if total_jiffies <= 0:
         return TimeFormatIndex.DEFAULT_TIME
 
     total_seconds = total_jiffies / os.sysconf(os.sysconf_names["SC_CLK_TCK"])
-    return _format_time_column(total_seconds)
+    return format_time_column(total_seconds)
