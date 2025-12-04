@@ -13,8 +13,8 @@ Tests are written using pytest and validate that get_process_vsz:
 """
 
 import psutil
-from process_util.pids import get_process_pids
-from process_util.vsz import get_process_vsz
+from backend.process_util.pids import get_process_pids
+from backend.process_util.vsz import get_process_vsz
 
 
 def test_get_process_vsz():

@@ -8,8 +8,8 @@ against psutil for all PIDs.
 import re
 import pytest
 import psutil
-from process_util.command import get_process_command
-from process_util.pids import get_process_pids
+from backend.process_util.command import get_process_command
+from backend.process_util.pids import get_process_pids
 
 
 def _normalize_cmd(cmd: str) -> str:

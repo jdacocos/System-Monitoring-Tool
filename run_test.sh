@@ -5,20 +5,20 @@ set -e
 # Optional argument: specific module or test
 TARGET=${1:-.}  # Default to current directory
 
+# Define the directories to target
+TARGET_DIRS=("backend" "test_modules")
+
 # ---------------------------
 # Clean out backup files (*~)
 # ---------------------------
 echo "=============================="
 echo "Cleaning up backup files (*~)..."
 echo "=============================="
-if [ -d "$TARGET" ]; then
-    find "$TARGET" -type f -name '*~' -delete
-else
-    # If TARGET is a single file, check if it ends with ~ and delete
-    if [[ "$TARGET" == *~ ]]; then
-        rm -f "$TARGET"
+for DIR in "${TARGET_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+        find "$DIR" -type f -name '*~' -delete
     fi
-fi
+done
 
 # ---------------------------
 # Autoflake: remove unused imports & variables
@@ -26,12 +26,11 @@ fi
 echo "=============================="
 echo "Running Autoflake to remove unused imports/variables..."
 echo "=============================="
-if [ -d "$TARGET" ]; then
-    PY_FILES=$(find "$TARGET" -name "*.py")
-else
-    PY_FILES="$TARGET"
-fi
-autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive $PY_FILES
+for DIR in "${TARGET_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+        autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive "$DIR"
+    fi
+done
 
 # ---------------------------
 # Black formatting
@@ -39,7 +38,11 @@ autoflake --in-place --remove-unused-variables --remove-all-unused-imports --rec
 echo "=============================="
 echo "Running Black for code formatting..."
 echo "=============================="
-black "$TARGET"
+for DIR in "${TARGET_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+        black "$DIR"
+    fi
+done
 
 # ---------------------------
 # Pylint static analysis
@@ -47,12 +50,11 @@ black "$TARGET"
 echo "=============================="
 echo "Running Pylint for static analysis..."
 echo "=============================="
-if [ -d "$TARGET" ]; then
-    PY_FILES=$(find "$TARGET" -name "*.py")
-else
-    PY_FILES="$TARGET"
-fi
-pylint $PY_FILES || true
+for DIR in "${TARGET_DIRS[@]}"; do
+    if [ -d "$DIR" ]; then
+        pylint $(find "$DIR" -name "*.py") || true
+    fi
+done
 
 # ---------------------------
 # Pytest normal
@@ -60,4 +62,4 @@ pylint $PY_FILES || true
 echo "=============================="
 echo "Running Pytest (normal output)..."
 echo "=============================="
-pytest "$TARGET"
+pytest "${TARGET_DIRS[@]}"

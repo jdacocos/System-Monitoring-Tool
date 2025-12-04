@@ -12,8 +12,8 @@ Functions:
         Handles kernel threads, missing PIDs, and permission errors gracefully.
 """
 
-from process_util.stat import read_process_stat_fields, base_state
-from file_helpers import read_file
+from backend.process_util.stat import read_process_stat_fields, base_state
+from backend.file_helpers import read_file
 
 
 def _read_cmdline(pid: int) -> str:

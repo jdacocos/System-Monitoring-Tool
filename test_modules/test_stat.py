@@ -9,8 +9,8 @@ Tests now compare the results with psutil where applicable.
 
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.stat import get_process_stat
+from backend.process_util.pids import get_process_pids
+from backend.process_util.stat import get_process_stat
 
 VALID_STATES = set("RSDZTtXxKWI")
 VALID_FLAGS = set("s<NlL+")

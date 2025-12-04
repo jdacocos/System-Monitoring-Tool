@@ -12,8 +12,8 @@ Functions:
 """
 
 import os
-from process_constants import TimeFormatIndex
-from process_util.cpu_percent import read_proc_pid_time
+from backend.process_constants import TimeFormatIndex
+from backend.process_util.cpu_percent import read_proc_pid_time
 
 
 def format_time_column(total_seconds: float) -> str:

@@ -22,8 +22,8 @@ Notes:
 """
 
 import os
-from process_constants import CpuStatIndex, ProcessStateIndex
-from file_helpers import read_lines, read_file
+from backend.process_constants import CpuStatIndex, ProcessStateIndex
+from backend.file_helpers import read_lines, read_file
 
 # caches for previous readings
 _LAST_TOTAL_JIFFIES: dict[int, int] = {}

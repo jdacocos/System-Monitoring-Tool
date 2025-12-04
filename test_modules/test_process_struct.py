@@ -16,7 +16,7 @@ Requirements:
 """
 
 import pytest
-from process_struct import ProcessInfo
+from backend.process_struct import ProcessInfo
 
 
 def test_process_info_creation_fields():

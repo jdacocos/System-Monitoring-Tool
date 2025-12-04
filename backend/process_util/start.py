@@ -7,9 +7,9 @@ Refactored to use file_helpers.read_file for file reading.
 
 import os
 import time
-from process_constants import ProcessStateIndex, UptimeIndex
-from process_util.stat import read_process_stat_fields
-from file_helpers import read_file
+from backend.process_constants import ProcessStateIndex, UptimeIndex
+from backend.process_util.stat import read_process_stat_fields
+from backend.file_helpers import read_file
 
 
 def _interpret_process_start(fields: list[str], _pid: int) -> str:

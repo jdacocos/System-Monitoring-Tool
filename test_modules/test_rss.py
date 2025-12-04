@@ -13,8 +13,8 @@ Tests are written using pytest and include:
 
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.rss import read_meminfo_total, get_process_rss
+from backend.process_util.pids import get_process_pids
+from backend.process_util.rss import read_meminfo_total, get_process_rss
 
 
 def test_read_meminfo_total():

@@ -9,8 +9,8 @@ Functions:
         Returns the VSZ of the given process in KB.
 """
 
-from process_constants import ProcessStateIndex, ProcStatmIndex
-from file_helpers import read_file
+from backend.process_constants import ProcessStateIndex, ProcStatmIndex
+from backend.file_helpers import read_file
 
 
 def get_process_vsz(pid: int) -> int:

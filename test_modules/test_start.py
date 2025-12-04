@@ -8,8 +8,8 @@ and comparing results with psutil where possible.
 import time
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.start import get_process_start
+from backend.process_util.pids import get_process_pids
+from backend.process_util.start import get_process_start
 
 
 def test_get_process_start_all_pids():

@@ -19,8 +19,8 @@ Requirements:
 
 import pytest
 import psutil
-from process_struct import ProcessInfo
-from process import populate_process_list
+from backend.process_struct import ProcessInfo
+from backend.process import populate_process_list
 
 
 @pytest.fixture

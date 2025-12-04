@@ -21,8 +21,8 @@ Linux-only: Requires access to a mounted /proc filesystem.
 import os
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.cpu_percent import (
+from backend.process_util.pids import get_process_pids
+from backend.process_util.cpu_percent import (
     _read_proc_stat_total,
     read_proc_pid_time,
     get_process_cpu_percent,

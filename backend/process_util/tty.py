@@ -14,8 +14,8 @@ Functions include:
 It relies on the /proc filesystem and a predefined TTY map.
 """
 
-from process_constants import ProcessStateIndex, TTYMapIndex
-from file_helpers import read_file
+from backend.process_constants import ProcessStateIndex, TTYMapIndex
+from backend.file_helpers import read_file
 
 
 def read_tty_nr_to_name(tty_nr: int) -> str:

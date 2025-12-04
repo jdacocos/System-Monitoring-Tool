@@ -17,9 +17,9 @@ Requirements:
 
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.time import get_process_time
-from process_constants import TimeFormatIndex
+from backend.process_util.pids import get_process_pids
+from backend.process_util.time import get_process_time
+from backend.process_constants import TimeFormatIndex
 
 
 def parse_time_string(time_str: str) -> int:

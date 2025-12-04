@@ -8,18 +8,18 @@ It uses cached CPU percentages to optimize performance in single-core environmen
 """
 
 from typing import List
-from process_struct import ProcessInfo
-from process_util.user import get_process_user
-from process_util.pids import get_process_pids
-from process_util.cpu_percent import get_process_cpu_percent
-from process_util.mem_percent import get_process_mem_percent
-from process_util.vsz import get_process_vsz
-from process_util.rss import get_process_rss
-from process_util.tty import get_process_tty
-from process_util.stat import get_process_stat
-from process_util.start import get_process_start
-from process_util.time import get_process_time
-from process_util.command import get_process_command
+from backend.process_struct import ProcessInfo
+from backend.process_util.user import get_process_user
+from backend.process_util.pids import get_process_pids
+from backend.process_util.cpu_percent import get_process_cpu_percent
+from backend.process_util.mem_percent import get_process_mem_percent
+from backend.process_util.vsz import get_process_vsz
+from backend.process_util.rss import get_process_rss
+from backend.process_util.tty import get_process_tty
+from backend.process_util.stat import get_process_stat
+from backend.process_util.start import get_process_start
+from backend.process_util.time import get_process_time
+from backend.process_util.command import get_process_command
 
 
 def _fetch_process(pid: int) -> ProcessInfo | None:

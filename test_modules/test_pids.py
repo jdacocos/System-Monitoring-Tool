@@ -19,7 +19,7 @@ Linux-only: Requires /proc filesystem.
 import os
 import pytest
 import psutil
-from process_util.pids import get_process_pids
+from backend.process_util.pids import get_process_pids
 
 
 def test_get_process_pids_basic():

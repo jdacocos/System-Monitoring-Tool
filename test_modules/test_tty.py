@@ -14,8 +14,8 @@ Tests are written using pytest and cover:
 
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.tty import read_tty_nr_to_name, get_process_tty
+from backend.process_util.pids import get_process_pids
+from backend.process_util.tty import read_tty_nr_to_name, get_process_tty
 
 
 def test_read_tty_nr_to_name_basic():

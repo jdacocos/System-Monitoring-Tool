@@ -20,9 +20,9 @@ returning default values when necessary.
 """
 
 import os
-from process_constants import ProcessStateIndex, StatMapIndex
-from process_util.tty import read_tty_nr_to_name
-from file_helpers import read_file
+from backend.process_constants import ProcessStateIndex, StatMapIndex
+from backend.process_util.tty import read_tty_nr_to_name
+from backend.file_helpers import read_file
 
 # Simple PID -> stat cache
 _STAT_CACHE: dict[int, str] = {}

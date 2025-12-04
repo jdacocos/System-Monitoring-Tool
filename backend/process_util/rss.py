@@ -13,8 +13,8 @@ The module only uses standard libraries and file_helpers.py.
 """
 
 import os
-from process_constants import MemInfoIndex, ProcStatmIndex
-from file_helpers import read_file
+from backend.process_constants import MemInfoIndex, ProcStatmIndex
+from backend.file_helpers import read_file
 
 
 def read_meminfo_total() -> int:

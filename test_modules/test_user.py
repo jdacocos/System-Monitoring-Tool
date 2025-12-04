@@ -18,8 +18,8 @@ Linux-only: Requires access to /proc filesystem and /etc/passwd
 import os
 import pytest
 import psutil
-from process_util.pids import get_process_pids
-from process_util.user import _uid_to_username, get_process_user
+from backend.process_util.pids import get_process_pids
+from backend.process_util.user import _uid_to_username, get_process_user
 
 
 def test_uid_to_username():

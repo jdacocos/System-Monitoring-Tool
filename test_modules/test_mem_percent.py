@@ -19,8 +19,8 @@ Linux-only: Requires access to /proc filesystem.
 
 import os
 import psutil
-from process_util.pids import get_process_pids
-from process_util.mem_percent import get_process_mem_percent
+from backend.process_util.pids import get_process_pids
+from backend.process_util.mem_percent import get_process_mem_percent
 
 
 def test_get_process_mem_percent_basic():
