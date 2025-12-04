@@ -1,4 +1,6 @@
-# Get memory usage information
+"""
+Get memory usage information
+"""
 
 from utilities import read_file
 from collections import namedtuple
