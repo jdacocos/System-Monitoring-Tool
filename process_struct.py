@@ -1,58 +1,82 @@
 """
 process_struct.py
 
-This module defines the ProcessInfo dataclass, which represents a system process
+This module defines the ProcessInfo class, which represents a system process
 with attributes corresponding to the columns of 'ps aux':
 
     USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND
 
-It is intended for use in system monitoring tools and other process management
-utilities.
+ProcessInfo instances store parsed data for use in system monitoring tools
+and other process management components.
 """
 
-from dataclasses import dataclass
 
-
-@dataclass
 # pylint: disable=too-many-instance-attributes
 class ProcessInfo:
     """
-    Dataclass representing a system process.
+    Class representing a system process.
 
     Attributes:
-        user (str): USER column in ps aux.
-        pid (int): PID column in ps aux.
-        cpu_percent (float): %CPU column in ps aux.
-        mem_percent (float): %MEM column in ps aux.
-        vsz (int): VSZ column in ps aux (virtual memory size in KB).
-        rss (int): RSS column in ps aux (resident memory size in KB).
-        tty (str): TTY column in ps aux (terminal associated with the process).
-        stat (str): STAT column in ps aux (process state, e.g., S, R, Z).
-        start (str): START column in ps aux (HH:MM, MonDD, or YYYY).
-        time (str): TIME column in ps aux ([[dd-]hh:]mm:ss).
-        command (str): COMMAND column in ps aux (command that launched the process).
+        user (str): USER column from ps aux.
+        pid (int): PID column.
+        cpu_percent (float): %CPU column.
+        mem_percent (float): %MEM column.
+        vsz (int): Virtual memory size in KB.
+        rss (int): Resident memory size in KB.
+        tty (str): Terminal associated with the process.
+        stat (str): Process state flags.
+        start (str): Process start time (format varies by uptime).
+        time (str): Total CPU time ([[dd-]hh:]mm:ss).
+        command (str): Full command that launched the process.
     """
 
-    user: str
-    pid: int
-    cpu_percent: float
-    mem_percent: float
-    vsz: int
-    rss: int
-    tty: str
-    stat: str
-    start: str
-    time: str
-    command: str
+    def __init__(
+        self,
+        user: str,
+        pid: int,
+        cpu_percent: float,
+        mem_percent: float,
+        vsz: int,
+        rss: int,
+        tty: str,
+        stat: str,
+        start: str,
+        time: str,
+        command: str,
+    ):
+        self.user = user
+        self.pid = pid
+        self.cpu_percent = cpu_percent
+        self.mem_percent = mem_percent
+        self.vsz = vsz
+        self.rss = rss
+        self.tty = tty
+        self.stat = stat
+        self.start = start
+        self.time = time
+        self.command = command
 
-    def __post_init__(self):
-        if not 0 <= self.cpu_percent <= 100:
+        self._validate()
+
+    def _validate(self):
+        """Validate input fields to prevent invalid process entries."""
+        if self.pid < 0:
+            raise ValueError(f"PID must be non-negative, got {self.pid}")
+
+        if not (0 <= self.cpu_percent <= 100):
             raise ValueError(
                 f"cpu_percent must be between 0 and 100, got {self.cpu_percent}"
             )
-        if not 0 <= self.mem_percent <= 100:
+
+        if not (0 <= self.mem_percent <= 100):
             raise ValueError(
                 f"mem_percent must be between 0 and 100, got {self.mem_percent}"
             )
-        if self.pid < 0:
-            raise ValueError(f"PID must be non-negative, got {self.pid}")
+
+    def __repr__(self):
+        return (
+            f"ProcessInfo(user={self.user!r}, pid={self.pid}, "
+            f"cpu_percent={self.cpu_percent}, mem_percent={self.mem_percent}, "
+            f"vsz={self.vsz}, rss={self.rss}, tty={self.tty!r}, stat={self.stat!r}, "
+            f"start={self.start!r}, time={self.time!r}, command={self.command!r})"
+        )

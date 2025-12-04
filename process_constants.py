@@ -13,12 +13,6 @@ These constants help prevent magic numbers and improve code readability.
 
 # pylint: disable=too-few-public-methods
 
-# Constants used by the process utility modules to open files.
-LNX_FS = "/proc"
-RD_ONLY = "r"
-UTF_8 = "utf-8"
-
-
 class ProcessStateIndex:
     """
     Constants representing the indices of fields in /proc/<pid>/stat.
