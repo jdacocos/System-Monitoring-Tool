@@ -15,7 +15,7 @@ The module only uses standard libraries: os, typing.
 
 import os
 from process_constants import PasswdIndex
-from helpers.file_helper import read_file
+from file_helpers import read_file
 
 
 def _uid_to_username(uid: int) -> str | None:
