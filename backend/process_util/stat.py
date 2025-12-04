@@ -66,7 +66,7 @@ def _priority_flags(fields: list[str]) -> str:
         nice = int(fields[ProcessStateIndex.NICE])
         if nice < StatMapIndex.DEFAULT_PRIORITY:
             return StatMapIndex.FLAG_MAP["high_priority"]
-        elif nice > StatMapIndex.DEFAULT_PRIORITY:
+        if nice > StatMapIndex.DEFAULT_PRIORITY:
             return StatMapIndex.FLAG_MAP["low_priority"]
     except (ValueError, IndexError):
         pass

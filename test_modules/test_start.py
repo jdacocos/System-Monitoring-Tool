@@ -12,6 +12,30 @@ from backend.process_util.pids import get_process_pids
 from backend.process_util.start import get_process_start
 
 
+def _try_time_parse(s: str, fmt: str) -> bool:
+    try:
+        time.strptime(s, fmt)
+        return True
+    except ValueError:
+        return False
+
+
+def _format_psutil_start(epoch_seconds: float) -> str:
+    """
+    Format psutil start time similar to ps-style START column.
+    """
+    start_tm = time.localtime(epoch_seconds)
+    now_tm = time.localtime(time.time())
+
+    if start_tm.tm_year == now_tm.tm_year and start_tm.tm_yday == now_tm.tm_yday:
+        return time.strftime("%H:%M", start_tm)
+
+    if start_tm.tm_year == now_tm.tm_year:
+        return time.strftime("%b%d", start_tm)
+
+    return str(start_tm.tm_year)
+
+
 def test_get_process_start_all_pids():
     """
     Test get_process_start for all PIDs listed in /proc.
@@ -53,26 +77,3 @@ def test_get_process_start_all_pids():
             assert start_str in ps_start or ps_start in start_str
         except (psutil.NoSuchProcess, psutil.AccessDenied):
             continue  # skip processes psutil cannot access
-
-
-def _try_time_parse(s: str, fmt: str) -> bool:
-    try:
-        time.strptime(s, fmt)
-        return True
-    except ValueError:
-        return False
-
-
-def _format_psutil_start(epoch_seconds: float) -> str:
-    """
-    Format psutil start time similar to ps-style START column.
-    """
-    start_tm = time.localtime(epoch_seconds)
-    now_tm = time.localtime(time.time())
-
-    if start_tm.tm_year == now_tm.tm_year and start_tm.tm_yday == now_tm.tm_yday:
-        return time.strftime("%H:%M", start_tm)
-    elif start_tm.tm_year == now_tm.tm_year:
-        return time.strftime("%b%d", start_tm)
-    else:
-        return str(start_tm.tm_year)

@@ -51,7 +51,7 @@ def test_get_process_command_vs_psutil():
             ps_cmd = "[PID not found]"
         except psutil.AccessDenied:
             ps_cmd = "[Permission denied]"
-        except Exception:
+        except OSError:
             ps_cmd = "[error]"
 
         assert our_cmd == ps_cmd, f"PID {pid} mismatch: '{our_cmd}' vs '{ps_cmd}'"

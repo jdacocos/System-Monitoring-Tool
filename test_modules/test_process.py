@@ -22,6 +22,8 @@ import psutil
 from backend.process_struct import ProcessInfo
 from backend.process import populate_process_list
 
+# pylint: disable=redefined-outer-name
+
 
 @pytest.fixture
 def processes() -> list[ProcessInfo]:

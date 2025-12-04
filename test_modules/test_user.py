@@ -51,7 +51,7 @@ def test_get_process_user_all_pids():
                 found_username = True
                 assert isinstance(username, str)
                 assert len(username) > 0
-        except Exception as e:
+        except (FileNotFoundError, PermissionError) as e:
             # Fail gracefully if /proc/<pid> is inaccessible
             print(f"Warning: Could not retrieve user for PID {pid}: {e}")
 

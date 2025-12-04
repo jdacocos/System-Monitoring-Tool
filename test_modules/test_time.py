@@ -31,10 +31,13 @@ def parse_time_string(time_str: str) -> int:
 
     if len(parts) == 2:  # M:SS
         return parts[0] * 60 + parts[1]
-    elif len(parts) == 3:  # H:MM:SS
+
+    if len(parts) == 3:  # H:MM:SS
         return parts[0] * 3600 + parts[1] * 60 + parts[2]
-    elif len(parts) == 4:  # D-HH:MM:SS
+
+    if len(parts) == 4:  # D-HH:MM:SS
         return parts[0] * 86400 + parts[1] * 3600 + parts[2] * 60 + parts[3]
+
     return 0
 
 
