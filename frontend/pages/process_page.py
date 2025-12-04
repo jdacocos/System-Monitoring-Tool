@@ -18,10 +18,10 @@ import os
 import time
 from typing import List
 
-from utils.ui_helpers import init_colors, draw_content_window, draw_section_header
-from utils.input_helpers import handle_input, GLOBAL_KEYS
-from process import populate_process_list
-from process_struct import ProcessInfo
+from frontend.utils.ui_helpers import init_colors, draw_content_window, draw_section_header
+from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
+from backend.process import populate_process_list
+from backend.process_struct import ProcessInfo
 
 # Fixed column widths
 COL_WIDTHS = {

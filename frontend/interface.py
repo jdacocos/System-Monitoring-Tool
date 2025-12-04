@@ -1,10 +1,10 @@
 import curses
-from pages.dashboard_page import render_dashboard
-from pages.cpu_page import render_cpu
-from pages.process_page import render_processes
-from pages.memory_page import render_memory
-from pages.network_page import render_network
-from pages.disk_page import render_disk
+from frontend.pages.dashboard_page import render_dashboard
+from frontend.pages.cpu_page import render_cpu
+from frontend.pages.process_page import render_processes
+from frontend.pages.memory_page import render_memory
+from frontend.pages.network_page import render_network
+from frontend.pages.disk_page import render_disk
 
 NAV_ITEMS: list[tuple[str, str, str]] = [
     ("dashboard", "Dashboard", "d"),

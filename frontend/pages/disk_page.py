@@ -3,7 +3,7 @@ from collections import deque
 import psutil
 import time
 
-from utils.ui_helpers import (
+from frontend.utils.ui_helpers import (
     init_colors,
     draw_content_window,
     draw_section_header,
@@ -11,7 +11,7 @@ from utils.ui_helpers import (
     format_bytes,
     draw_sparkline,
 )
-from utils.input_helpers import handle_input, GLOBAL_KEYS
+from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
 
 READ_HISTORY: deque[float] = deque(maxlen=120)
 WRITE_HISTORY: deque[float] = deque(maxlen=120)

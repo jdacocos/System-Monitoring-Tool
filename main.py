@@ -1,5 +1,5 @@
 import curses
-from interface import run_interface
+from frontend.interface import run_interface
 
 
 def main(stdscr: curses.window) -> None:

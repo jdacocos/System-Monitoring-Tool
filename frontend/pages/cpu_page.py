@@ -3,14 +3,14 @@ from collections import deque
 import psutil
 import time
 
-from utils.ui_helpers import (
+from frontend.utils.ui_helpers import (
     init_colors,
     draw_content_window,
     draw_bar,
     draw_section_header,
     draw_sparkline,
 )
-from utils.input_helpers import handle_input, GLOBAL_KEYS
+from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
 
 
 def get_cpu_stats() -> dict:
