@@ -1,8 +1,8 @@
 """
 process.py
 
-This module provides functions to collect process information on a Linux system
-and populate a list of ProcessInfo objects representing all running processes.
+This module collects process information on a Linux system
+and populates a list of ProcessInfo objects representing all running processes.
 
 It uses cached CPU percentages to optimize performance in single-core environments.
 """
@@ -23,7 +23,11 @@ from process_util.command import get_process_command
 
 
 def _fetch_process(pid: int) -> ProcessInfo | None:
-    """Fetch a single PID's ProcessInfo safely."""
+    """
+    Fetch a single PID's ProcessInfo safely.
+
+    Returns None if the process is inaccessible, exited, or invalid.
+    """
     try:
         return ProcessInfo(
             user=get_process_user(pid),
@@ -44,8 +48,7 @@ def _fetch_process(pid: int) -> ProcessInfo | None:
 
 def populate_process_list() -> List[ProcessInfo]:
     """
-    Populate a list of ProcessInfo instances for all running processes
-    using cached CPU percentages (single-core safe).
+    Populate a list of ProcessInfo instances for all running processes.
     """
     process_list: List[ProcessInfo] = []
     pids = get_process_pids()

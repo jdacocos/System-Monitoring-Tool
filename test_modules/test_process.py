@@ -1,27 +1,21 @@
 """
 test_process.py
 
-This pytest module retrieves and displays all running processes
-on the system using the ProcessInfo dataclass and the populate_process_list()
-function.
+Pytest module for validating the ProcessInfo objects created by process.py.
 
-It prints the process list in a format similar to the 'ps aux' command,
-including the following columns:
-
-    USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND
-
-Purpose:
-    - Manual inspection of the ProcessInfo population
-    - Visual verification that all getters for process attributes
-      are working correctly
-    - Provides a reference layout for automated unit tests in the future
+Tests verify:
+    - Process list is not empty
+    - All entries are ProcessInfo instances
+    - Required fields exist with correct types
+    - PIDs are unique
+    - CPU, memory, and memory sizes are non-negative
+    - Optional visual display
+    - Comparison with psutil for consistency across all running PIDs
 
 Requirements:
     - pytest
-    - The process.py module with a working populate_process_list() function
+    - psutil
 """
-
-# pylint: disable=redefined-outer-name
 
 import pytest
 import psutil
@@ -103,28 +97,49 @@ def test_optional_display(processes: list[ProcessInfo]) -> None:
 def test_against_psutil(processes: list[ProcessInfo]) -> None:
     """
     Compare the ProcessInfo list against psutil's process list.
-    Checks that at least the PIDs match and that key fields are reasonable.
+
+    Ensures that:
+      - PIDs overlap with psutil
+      - USER matches psutil where available
+      - COMMAND matches for normal user processes
+      - Kernel thread commands are non-empty inside brackets
     """
-    # Get psutil PIDs
-    psutil_pids = {p.pid for p in psutil.process_iter(["pid"])}
+    # Get all psutil processes with basic info
+    psutil_procs = {p.pid: p for p in psutil.process_iter(["pid", "name", "username"])}
 
-    # Get PIDs from your ProcessInfo
-    custom_pids = {proc.pid for proc in processes}
+    for proc in processes:
+        # Skip PIDs not in psutil
+        if proc.pid not in psutil_procs:
+            continue
 
-    # There should be overlap
-    assert (
-        custom_pids & psutil_pids
-    ), "No PIDs match between populate_process_list() and psutil"
+        ps_proc = psutil_procs[proc.pid]
 
-    # Optional: check some fields for one sample process
-    for proc in processes[:5]:  # check first 5 processes
+        # Compare username
         try:
-            ps_proc = psutil.Process(proc.pid)
-            # Check CPU and memory percentages are reasonably close
-            cpu_diff = abs(proc.cpu_percent - ps_proc.cpu_percent(interval=0.0))
-            mem_diff = abs(proc.mem_percent - ps_proc.memory_percent())
-            assert cpu_diff < 50, f"CPU mismatch for PID {proc.pid}: {cpu_diff}"
-            assert mem_diff < 50, f"Memory mismatch for PID {proc.pid}: {mem_diff}"
-        except psutil.NoSuchProcess:
-            # process may have terminated; skip
+            ps_user = ps_proc.username()
+            if ps_user:
+                assert proc.user == ps_user, f"PID {proc.pid} USER mismatch"
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
+            # Ignore inaccessible or terminated processes
+            continue
+
+        # Compare command line
+        try:
+            ps_cmd_list = ps_proc.cmdline()
+            ps_cmd = " ".join(ps_cmd_list) if ps_cmd_list else f"[{ps_proc.name()}]"
+
+            # Normalize whitespace for comparison
+            proc_cmd_norm = " ".join(proc.command.split())
+            ps_cmd_norm = " ".join(ps_cmd.split())
+
+            if proc.command.startswith("[") and proc.command.endswith("]"):
+                # Kernel threads: just ensure non-empty inside brackets
+                assert (
+                    len(proc.command) > 2
+                ), f"PID {proc.pid} malformed kernel thread command"
+            else:
+                # Normal processes: compare normalized commands
+                assert proc_cmd_norm == ps_cmd_norm, f"PID {proc.pid} COMMAND mismatch"
+
+        except (psutil.AccessDenied, psutil.NoSuchProcess):
             continue

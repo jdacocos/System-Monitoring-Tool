@@ -126,12 +126,12 @@ def get_process_stat(pid: int) -> str:
     if not fields:
         return StatMapIndex.DEFAULT_STAT
 
-    base_state = base_state(fields)
+    state_char = base_state(fields)
 
     # Use cache for sleeping, disk sleep, or zombie processes
-    if base_state in ("S", "D", "Z") and pid in _STAT_CACHE:
+    if state_char in ("S", "D", "Z") and pid in _STAT_CACHE:
         cached = _STAT_CACHE[pid]
-        return f"{base_state}{cached[1:]}"  # keep cached flags, update base state
+        return f"{state_char}{cached[1:]}"  # keep cached flags, update base state
 
     flags = (
         _session_leader_flag(fields, pid)
@@ -139,8 +139,8 @@ def get_process_stat(pid: int) -> str:
         + _locked_flag(fields)
         + _multi_threaded_flag(fields)
     )
-    fg_flag = _foreground_flag(fields) if base_state == "R" else ""
+    fg_flag = _foreground_flag(fields) if state_char == "R" else ""
 
-    stat_str = base_state + flags + fg_flag
+    stat_str = state_char + flags + fg_flag
     _STAT_CACHE[pid] = stat_str
     return stat_str
