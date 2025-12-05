@@ -1,6 +1,5 @@
 import curses
 from collections import deque
-import psutil
 import time
 
 from frontend.utils.ui_helpers import (
@@ -11,20 +10,25 @@ from frontend.utils.ui_helpers import (
     draw_sparkline,
 )
 from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
-
+from backend.cpu_info import (
+    get_cpu_percent_per_core,
+    get_cpu_freq,
+    get_logical_cpu_count,
+    get_physical_cpu_count
+)
 
 def get_cpu_stats() -> dict:
     """Fetch and return key CPU statistics."""
 
-    per_core = psutil.cpu_percent(interval=0.1, percpu=True)
+    per_core = get_cpu_percent_per_core(interval=0.1)
     overall = sum(per_core) / len(per_core) if per_core else 0.0
-    freq = psutil.cpu_freq()
+    freq = get_cpu_freq()
     return {
         "overall": overall,
         "per_core": per_core,
         "freq": freq,
-        "logical": psutil.cpu_count(logical=True),
-        "physical": psutil.cpu_count(logical=False),
+        "logical": get_logical_cpu_count(),
+        "physical": get_physical_cpu_count(),
     }
 
 
