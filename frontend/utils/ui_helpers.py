@@ -5,6 +5,8 @@ import curses
 from datetime import datetime
 from typing import Iterable, Sequence
 
+# pylint: disable=too-many-arguments, too-many-positional-arguments, too-many-locals, too-many-statements
+
 SPARKLINE_CHARS = "▁▂▃▄▅▆▇█"
 
 SIDEBAR_WIDTH = 22
@@ -27,7 +29,7 @@ def init_colors() -> None:
 
 def draw_header(stdscr: curses.window, title: str) -> None:
     """Render the top header banner with a dynamically updating timestamp."""
-    height, width = stdscr.getmaxyx()
+    _, width = stdscr.getmaxyx()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
     stdscr.hline(0, 0, " ", width)
@@ -132,10 +134,10 @@ def draw_bar(
     """Draw a horizontal usage bar inside the given window."""
     value = max(0.0, min(value, 100.0))
     filled = int((value / 100) * width)
-    bar = "█" * filled + "░" * (width - filled)
+    bar_str = "█" * filled + "░" * (width - filled)
     color = 3 if value < 80 else 4
     stdscr.attron(curses.color_pair(color))
-    stdscr.addstr(y, x, f"{label:<12} [{bar}] {value:5.1f}%")
+    stdscr.addstr(y, x, f"{label:<12} [{bar_str}] {value:5.1f}%")
     stdscr.attroff(curses.color_pair(color))
 
 

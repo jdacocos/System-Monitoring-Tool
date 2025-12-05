@@ -42,11 +42,21 @@ SORT_KEYS = {
 # Critical processes that require confirmation before killing
 # These are typically shells, SSH connections, and system processes
 CRITICAL_PROCESSES = {
-    "bash", "sh", "zsh", "fish", "tcsh", "csh",  # Shells
-    "sshd", "ssh",  # SSH
-    "systemd", "init",  # Init systems
-    "systemd-logind", "login",  # Login managers
-    "gnome-session", "kde-session", "xfce4-session",  # Desktop sessions
+    "bash",
+    "sh",
+    "zsh",
+    "fish",
+    "tcsh",
+    "csh",  # Shells
+    "sshd",
+    "ssh",  # SSH
+    "systemd",
+    "init",  # Init systems
+    "systemd-logind",
+    "login",  # Login managers
+    "gnome-session",
+    "kde-session",
+    "xfce4-session",  # Desktop sessions
 }
 
 # Timing intervals (in seconds)

@@ -1,3 +1,10 @@
+"""
+Utility functions for handling keyboard input within the curses-based frontend.
+
+This module provides helpers for capturing validated user input and defines
+a set of shared navigation keys used throughout the interface.
+"""
+
 import curses
 
 

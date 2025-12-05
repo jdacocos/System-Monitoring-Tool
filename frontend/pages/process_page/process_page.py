@@ -21,11 +21,9 @@ from typing import List, Optional, Tuple
 from frontend.utils.ui_helpers import (
     init_colors,
     draw_content_window,
-    draw_section_header
+    draw_section_header,
 )
 from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
-from backend.process import populate_process_list
-from backend.process_struct import ProcessInfo
 from frontend.pages.process_page.process_page_constants import (
     COL_WIDTHS,
     SORT_KEYS,
@@ -52,6 +50,9 @@ from frontend.pages.process_page.process_page_constants import (
     COLOR_SELECTED,
 )
 
+from backend.process import populate_process_list
+from backend.process_struct import ProcessInfo
+
 
 def is_critical_process(proc: ProcessInfo) -> bool:
     """Check if a process is critical (dangerous to kill)."""
@@ -72,18 +73,18 @@ def is_critical_process(proc: ProcessInfo) -> bool:
 def _extract_command_name(command: str) -> str:
     """
     Extract base command name from full command string.
-    
+
     Helper: Removes path prefixes, leading dashes (login shells),
     and command arguments to get just the base command name.
     """
     cmd = command.strip()
 
     # Remove leading dash (for login shells like -bash, -zsh, etc.)
-    if cmd.startswith('-'):
+    if cmd.startswith("-"):
         cmd = cmd[1:]
 
-    if '/' in cmd:
-        cmd = cmd.split('/')[-1]  # Get just the filename
+    if "/" in cmd:
+        cmd = cmd.split("/")[-1]  # Get just the filename
 
     cmd = cmd.split()[0]  # Get just the command without args
 
@@ -102,7 +103,7 @@ def get_all_processes(sort_mode: str = "cpu") -> List[ProcessInfo]:
 def _get_process_color(proc: ProcessInfo, is_selected: bool) -> int:
     """
     Determine the color pair for a process based on its state.
-    
+
     Helper: Returns appropriate color for critical/normal processes
     and selected/unselected states.
     """
@@ -117,13 +118,13 @@ def _get_process_color(proc: ProcessInfo, is_selected: bool) -> int:
 def _format_process_line(proc: ProcessInfo, width: int) -> str:
     """
     Format a process info into a display line.
-    
-    Helper: Creates a formatted string with all process information
-    aligned according to column widths.
+    Ensures the line fits within the window width, leaving space for the right border.
     """
     tty_display = (proc.tty or "?")[: COL_WIDTHS["tty"] - 1]
-    used_width = sum(COL_WIDTHS.values())
-    command_width = max(10, width - 4 - used_width)
+    # Total width of all fixed columns except command
+    fixed_width = sum(v for k, v in COL_WIDTHS.items() if k != "command")
+    # Reserve 1 column for the right border │
+    command_width = max(10, width - 3 - fixed_width)  # 2 left padding + 1 right border
     command_display = (proc.command or "")[:command_width]
 
     return (
@@ -145,13 +146,16 @@ def draw_process_row(
     win: curses.window, y: int, proc: ProcessInfo, width: int, is_selected: bool
 ):
     """Draw a single process row in the window."""
-    line = _format_process_line(proc, width)
+    line = _format_process_line(proc, width - 1)  # leave last column for │
     color_pair = _get_process_color(proc, is_selected)
-
     try:
+        # Draw the row content with its color
         win.attron(curses.color_pair(color_pair))
-        win.addnstr(y, 2, line, width - 3)
+        win.addnstr(y, 2, line, width - 2)
         win.attroff(curses.color_pair(color_pair))
+
+        # Draw the right-hand border in normal color
+        win.addch(y, width - 1, "│", curses.color_pair(COLOR_NORMAL))
     except curses.error:
         pass
 
@@ -159,7 +163,7 @@ def draw_process_row(
 def _format_header() -> str:
     """
     Format the process list header.
-    
+
     Helper: Creates column headers with proper spacing and alignment.
     """
     header_fmt = (
@@ -186,7 +190,7 @@ def _format_header() -> str:
 def _clear_content_area(win: curses.window, height: int):
     """
     Clear the process list content area.
-    
+
     Helper: Erases all lines between header and footer to prepare
     for fresh process list rendering.
     """
@@ -200,14 +204,27 @@ def _clear_content_area(win: curses.window, height: int):
 
 def _draw_header(win: curses.window, width: int, sort_mode: str):
     """
-    Draw the header section.
-    
-    Helper: Renders column headers and horizontal separator line.
+    Draw the header section with left and right borders and horizontal separator line.
     """
     header = _format_header()
     try:
-        win.addnstr(HEADER_ROW, 2, header, width - 3)
-        win.hline(SEPARATOR_ROW, 2, curses.ACS_HLINE, width - 4)
+        # Draw left border │
+        win.addch(HEADER_ROW, 1, "│", curses.color_pair(COLOR_NORMAL))
+
+        # Draw header text starting with 1 space padding
+        win.addnstr(
+            HEADER_ROW, 1, " " + header, width - 3, curses.color_pair(COLOR_NORMAL)
+        )
+
+        # Draw right border │
+        win.addch(HEADER_ROW, width - 1, "│", curses.color_pair(COLOR_NORMAL))
+
+        # Draw horizontal line under the header
+        # Left border │, line in the middle, right border │
+        win.addch(SEPARATOR_ROW, 0, "│", curses.color_pair(COLOR_NORMAL))
+        win.hline(SEPARATOR_ROW, 1, curses.ACS_HLINE, width - 3)
+        win.addch(SEPARATOR_ROW, width - 1, "│", curses.color_pair(COLOR_NORMAL))
+
     except curses.error:
         pass
 
@@ -223,7 +240,7 @@ def _draw_process_rows(
 ):
     """
     Draw all visible process rows.
-    
+
     Helper: Iterates through visible processes and renders each row
     with appropriate selection highlighting.
     """
@@ -240,7 +257,7 @@ def draw_footer(
     height: int,
     error_message: str = None,
     confirm_kill: bool = False,
-    process_name: str = None
+    process_name: str = None,
 ) -> None:
     """Draw the footer with available controls and optional error message."""
     try:
@@ -248,27 +265,36 @@ def draw_footer(
         win.move(height - FOOTER_OFFSET, 2)
         win.clrtoeol()
 
-        win.attron(curses.color_pair(COLOR_FOOTER))
+        footer_width = win.getmaxyx()[1] - 3  # leave last column for │
 
         if confirm_kill and process_name:
             # Show kill confirmation prompt in warning color
             win.attron(curses.color_pair(COLOR_ERROR))
             confirm_text = f"⚠ Kill '{process_name}'? [Y]es / [N]o"
-            win.addnstr(height - FOOTER_OFFSET, 2, confirm_text, win.getmaxyx()[1] - 3)
+            win.addnstr(height - FOOTER_OFFSET, 2, confirm_text, footer_width)
             win.attroff(curses.color_pair(COLOR_ERROR))
         elif error_message:
             # Show error message in red
             win.attron(curses.color_pair(COLOR_ERROR))
-            win.addnstr(height - FOOTER_OFFSET, 2, error_message, win.getmaxyx()[1] - 3)
+            win.addnstr(height - FOOTER_OFFSET, 2, error_message, footer_width)
             win.attroff(curses.color_pair(COLOR_ERROR))
         else:
             footer_text = (
                 "[↑↓/PgUp/PgDn/Home/End] Navigate  "
                 "[C]PU  [M]em  [P]ID  [N]ame  [K]ill  [Q]uit"
             )
-            win.addnstr(height - FOOTER_OFFSET, 2, footer_text, win.getmaxyx()[1] - 3)
+            win.attron(curses.color_pair(COLOR_FOOTER))
+            win.addnstr(height - FOOTER_OFFSET, 2, footer_text, footer_width)
+            win.attroff(curses.color_pair(COLOR_FOOTER))
 
-        win.attroff(curses.color_pair(COLOR_FOOTER))
+        # Draw the right-hand border in normal color
+        win.addch(
+            height - FOOTER_OFFSET,
+            win.getmaxyx()[1] - 1,
+            "│",
+            curses.color_pair(COLOR_NORMAL),
+        )
+
     except curses.error:
         pass
 
@@ -287,14 +313,14 @@ def draw_process_list(
     height, width = win.getmaxyx()
 
     _clear_content_area(win, height)
-    draw_section_header(win, SECTION_HEADER_ROW,
-                       f"Running Processes (Sort by {sort_mode.upper()})")
+    draw_section_header(
+        win, SECTION_HEADER_ROW, f"Running Processes (Sort by {sort_mode.upper()})"
+    )
     _draw_header(win, width, sort_mode)
 
     visible_lines = height - VISIBLE_LINE_OFFSET
     _draw_process_rows(
-        win, processes, selected_index, scroll_start,
-        visible_lines, width, height
+        win, processes, selected_index, scroll_start, visible_lines, width, height
     )
 
     draw_footer(win, height, error_message, confirm_kill, process_name)
@@ -302,55 +328,65 @@ def draw_process_list(
 
 def _handle_navigation_keys(key: int, selected_index: int, num_processes: int) -> int:
     """
+    Helper:
     Handle navigation key inputs and return new selected index.
-    
-    Helper: Processes arrow keys, page up/down, home/end keys and
+
+    Processes arrow keys, page up/down, home/end keys and
     calculates the new selection index with bounds checking.
     """
+    new_index = selected_index
+
     if key == curses.KEY_UP:
-        return max(0, selected_index - 1)
-    if key == curses.KEY_DOWN:
-        return min(selected_index + 1, num_processes - 1)
-    if key == curses.KEY_PPAGE:  # Page Up
-        return max(0, selected_index - PAGE_JUMP_SIZE)
-    if key == curses.KEY_NPAGE:  # Page Down
-        return min(selected_index + PAGE_JUMP_SIZE, num_processes - 1)
-    if key == curses.KEY_HOME:
-        return 0
-    if key == curses.KEY_END:
-        return num_processes - 1
-    return selected_index
+        new_index = max(0, selected_index - 1)
+    elif key == curses.KEY_DOWN:
+        new_index = min(selected_index + 1, num_processes - 1)
+    elif key == curses.KEY_PPAGE:  # Page Up
+        new_index = max(0, selected_index - PAGE_JUMP_SIZE)
+    elif key == curses.KEY_NPAGE:  # Page Down
+        new_index = min(selected_index + PAGE_JUMP_SIZE, num_processes - 1)
+    elif key == curses.KEY_HOME:
+        new_index = 0
+    elif key == curses.KEY_END:
+        new_index = num_processes - 1
+
+    return new_index
 
 
 def _handle_sort_keys(key: int) -> Optional[str]:
     """
     Handle sort key inputs and return new sort mode.
-    
+
     Helper: Maps C/M/P/N keys to their respective sort modes
     (cpu, mem, pid, name).
     """
+    mode = None
     if key in (ord("c"), ord("C")):
-        return "cpu"
+        mode = "cpu"
     if key in (ord("m"), ord("M")):
-        return "mem"
+        mode = "mem"
     if key in (ord("p"), ord("P")):
-        return "pid"
+        mode = "pid"
     if key in (ord("n"), ord("N")):
-        return "name"
-    return None
+        mode = "name"
+    return mode
 
 
 def _is_quit_or_nav_key(key: int) -> bool:
     """
     Check if key is a quit or navigation key.
-    
+
     Helper: Returns True for keys that should exit the process viewer
     (Q for quit, D for dashboard, 1/3/4/5 for other pages).
     """
     return key in (
-        ord("d"), ord("D"),
-        ord("1"), ord("3"), ord("4"), ord("5"),
-        ord("q"), ord("Q")
+        ord("d"),
+        ord("D"),
+        ord("1"),
+        ord("3"),
+        ord("4"),
+        ord("5"),
+        ord("q"),
+        ord("Q"),
     )
 
 
@@ -409,7 +445,7 @@ def init_process_viewer(stdscr: curses.window) -> dict:
 def cleanup_and_exit(message: str = None):
     """
     Properly cleanup terminal and exit.
-    
+
     Helper: Restores terminal to normal state, optionally prints a message,
     and exits the process.
     """
@@ -418,7 +454,7 @@ def cleanup_and_exit(message: str = None):
     except Exception:  # pylint: disable=broad-except
         pass
 
-    os.system('reset')
+    os.system("reset")
 
     if message:
         print(message)
@@ -429,7 +465,7 @@ def cleanup_and_exit(message: str = None):
 def _kill_process(pid: int):
     """
     Attempt to kill a process, trying SIGTERM then SIGKILL.
-    
+
     Helper: Sends SIGTERM for graceful shutdown, waits briefly, then
     sends SIGKILL if process still exists.
     """
@@ -446,11 +482,13 @@ def _kill_process(pid: int):
 def _handle_kill_confirmation(key: int, state: dict) -> Optional[int]:
     """
     Handle kill confirmation input. Returns quit key if applicable.
-    
-    Helper: Processes Y/N/ESC keys during kill confirmation mode and
+
+    Processes Y/N/ESC keys during kill confirmation mode and
     executes or cancels the kill operation.
     """
-    if key in (ord('y'), ord('Y')):
+    quit_key = None
+
+    if key in (ord("y"), ord("Y")):
         pid_to_kill = state["kill_target_pid"]
         try:
             _kill_process(pid_to_kill)
@@ -462,27 +500,25 @@ def _handle_kill_confirmation(key: int, state: dict) -> Optional[int]:
 
         state["confirm_kill"] = False
         state["kill_target_pid"] = None
-        return None
 
-    if key in (ord('n'), ord('N'), 27):  # N or ESC
+    elif key in (ord("n"), ord("N"), 27):  # N or ESC
         state["confirm_kill"] = False
         state["kill_target_pid"] = None
         state["needs_refresh"] = True
-        return None
 
-    return None
+    return quit_key
 
 
 def _handle_kill_request(selected_proc: ProcessInfo, state: dict, current_pid: int):
     """
     Handle a kill request for the selected process.
-    
+
     Helper: Checks if process is self or critical, requiring confirmation
     for critical processes and immediate kill for normal processes.
     """
     # Check if killing ourselves
     if selected_proc.pid in (current_pid, os.getpid()):
-        return ord('q')
+        return ord("q")
 
     # Check if critical - require confirmation
     if is_critical_process(selected_proc):
@@ -540,7 +576,9 @@ def refresh_process_state(state: dict) -> None:
     """Refresh cached processes if needed."""
     now = time.time()
 
-    if state["needs_refresh"] or (now - state["last_refresh"] >= state["refresh_interval"]):
+    if state["needs_refresh"] or (
+        now - state["last_refresh"] >= state["refresh_interval"]
+    ):
         state["cached_processes"] = get_all_processes(state["sort_mode"])
         state["last_refresh"] = now
 
@@ -548,7 +586,7 @@ def refresh_process_state(state: dict) -> None:
 def _should_clear_error(state: dict, now: float) -> bool:
     """
     Check if error message should be cleared.
-    
+
     Helper: Returns True if error display timeout has elapsed.
     """
     if not state.get("error_message") or not state.get("error_time"):
@@ -559,15 +597,15 @@ def _should_clear_error(state: dict, now: float) -> bool:
 def _get_confirmation_process_name(processes: List[ProcessInfo], pid: int) -> str:
     """
     Get the process name for kill confirmation.
-    
+
     Helper: Finds the process by PID and extracts a clean display name
     for the confirmation prompt.
     """
     for proc in processes:
         if proc.pid == pid:
             cmd = proc.command or "unknown"
-            if '/' in cmd:
-                cmd = cmd.split('/')[-1]
+            if "/" in cmd:
+                cmd = cmd.split("/")[-1]
             return cmd.split()[0] if cmd else "unknown"
     return "unknown"
 
@@ -575,7 +613,7 @@ def _get_confirmation_process_name(processes: List[ProcessInfo], pid: int) -> st
 def _prepare_display_state(state: dict, processes: List[ProcessInfo], now: float):
     """
     Prepare display state including error messages and confirmations.
-    
+
     Helper: Gathers current error message, confirmation status, and process
     name for rendering the footer display.
     """
@@ -600,7 +638,7 @@ def _prepare_display_state(state: dict, processes: List[ProcessInfo], now: float
 def _handle_window_resize(stdscr: curses.window) -> Tuple[Optional[int], Optional[int]]:
     """
     Handle terminal size and return dimensions, or None if too small.
-    
+
     Helper: Checks terminal dimensions and displays warning if window
     is too small to display the process manager.
     """
@@ -627,11 +665,11 @@ def _create_or_get_window(
     active_page: str,
     win: Optional[curses.window],
     last_dimensions: Optional[Tuple[int, int]],
-    current_dimensions: Tuple[int, int]
+    current_dimensions: Tuple[int, int],
 ) -> Tuple[Optional[curses.window], Optional[Tuple[int, int]]]:
     """
     Create or reuse content window based on dimension changes.
-    
+
     Helper: Creates a new content window only when dimensions change,
     otherwise reuses existing window for efficiency.
     """
@@ -646,13 +684,13 @@ def _create_or_get_window(
 def _initialize_render_state(stdscr: curses.window) -> dict:
     """
     Initialize the rendering state for the main loop.
-    
+
     Helper: Sets up initial state including viewer state, window tracking,
     and timing variables needed for the render loop.
     """
     state = init_process_viewer(stdscr)
     current_pid = os.getpid()
-    
+
     return {
         "viewer_state": state,
         "current_pid": current_pid,
@@ -665,7 +703,7 @@ def _initialize_render_state(stdscr: curses.window) -> dict:
 def _handle_empty_window(stdscr: curses.window) -> Optional[int]:
     """
     Handle case when content window creation fails.
-    
+
     Helper: Checks for global key input and returns appropriate key code,
     or None if should continue loop.
     """
@@ -679,7 +717,7 @@ def _handle_empty_window(stdscr: curses.window) -> Optional[int]:
 def _display_empty_process_list(win: curses.window, win_height: int):
     """
     Display message when no processes are found.
-    
+
     Helper: Clears content area and shows "No processes found" message.
     """
     try:
@@ -693,7 +731,7 @@ def _display_empty_process_list(win: curses.window, win_height: int):
 def _should_redraw(now: float, last_draw_time: float, needs_refresh: bool) -> bool:
     """
     Determine if screen should be redrawn.
-    
+
     Helper: Checks if enough time has passed or if a forced refresh is needed.
     """
     return (now - last_draw_time) >= DRAW_INTERVAL or needs_refresh
@@ -709,7 +747,7 @@ def _perform_draw(
 ):
     """
     Execute the screen drawing operations.
-    
+
     Helper: Draws the process list and refreshes the display.
     """
     draw_process_list(
@@ -732,7 +770,7 @@ def _perform_draw(
 def _handle_resize_key(render_state: dict):
     """
     Handle terminal resize event.
-    
+
     Helper: Resets window state to force recreation on next iteration.
     """
     render_state["win"] = None
@@ -745,18 +783,18 @@ def _process_input_key(
 ) -> Optional[int]:
     """
     Process user input and update state accordingly.
-    
+
     Helper: Handles resize events and user input, returns quit key if applicable.
     """
     if key == curses.KEY_RESIZE:
         _handle_resize_key(render_state)
         return None
-    
+
     quit_key = process_user_input(key, viewer_state, current_pid)
-    
+
     if quit_key is not None:
         return quit_key
-    
+
     viewer_state["needs_refresh"] = True
     return None
 
@@ -769,72 +807,82 @@ def _handle_main_loop_iteration(
 ) -> Optional[int]:
     """
     Execute one iteration of the main render loop.
-    
+
     Helper: Handles window management, process display, and input processing
     for a single loop iteration.
     """
     viewer_state = render_state["viewer_state"]
-    
+
     # Handle terminal size
     dimensions = _handle_window_resize(stdscr)
     if dimensions == (None, None):
         time.sleep(0.5)
         return None
-    
+
     # Get or create window
     render_state["win"], render_state["last_dimensions"] = _create_or_get_window(
-        stdscr, nav_items, active_page,
-        render_state["win"], render_state["last_dimensions"], dimensions
+        stdscr,
+        nav_items,
+        active_page,
+        render_state["win"],
+        render_state["last_dimensions"],
+        dimensions,
     )
-    
+
     if render_state["win"] is None:
         return _handle_empty_window(stdscr)
-    
+
     # Get window dimensions
     try:
-        win_height, win_width = render_state["win"].getmaxyx()
+        win_height, _ = render_state["win"].getmaxyx()
     except curses.error:
         render_state["win"] = None
         return None
-    
+
     visible_lines = win_height - VISIBLE_LINE_OFFSET
-    
+
     # Refresh process data
     refresh_process_state(viewer_state)
     processes = viewer_state["cached_processes"]
-    
+
     # Handle empty process list
     if not processes:
         _display_empty_process_list(render_state["win"], win_height)
         time.sleep(0.1)
         return None
-    
+
     # Update scroll position
     clamp_and_scroll(viewer_state, visible_lines)
-    
+
     # Prepare display state
     now = time.time()
     current_error, confirm_kill, process_name = _prepare_display_state(
         viewer_state, processes, now
     )
-    
+
     # Check if should redraw
-    if _should_redraw(now, render_state["last_draw_time"], viewer_state["needs_refresh"]):
+    if _should_redraw(
+        now, render_state["last_draw_time"], viewer_state["needs_refresh"]
+    ):
         _perform_draw(
-            render_state["win"], processes, viewer_state,
-            current_error, confirm_kill, process_name
+            render_state["win"],
+            processes,
+            viewer_state,
+            current_error,
+            confirm_kill,
+            process_name,
         )
         render_state["last_draw_time"] = now
         viewer_state["needs_refresh"] = False
-    
+
     # Handle input
     key = stdscr.getch()
-    
+
     if key != -1:
         return _process_input_key(
             key, viewer_state, render_state["current_pid"], render_state
         )
-    
+
     return None
 
 
@@ -843,11 +891,11 @@ def render_processes(
 ) -> int:
     """Interactive curses process viewer with sorting, scrolling, and kill."""
     render_state = _initialize_render_state(stdscr)
-    
+
     while True:
         quit_key = _handle_main_loop_iteration(
             stdscr, nav_items, active_page, render_state
         )
-        
+
         if quit_key is not None:
             return quit_key

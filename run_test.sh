@@ -1,55 +1,50 @@
 #!/bin/bash
-# Exit immediately if any command fails
 set -e
 
-# Optional argument: specific module or test
-TARGET=${1:-.}  # Default to current directory
+# Optional argument: specific module or test folder
+TARGET=${1:-.}
 
-# Define the directories to target
 TARGET_DIRS=("backend" "test_modules")
 
-# Clean out backup files (*~)
 echo "=============================="
 echo "Cleaning up backup files (*~)..."
 echo "=============================="
 for DIR in "${TARGET_DIRS[@]}"; do
-    if [ -d "$DIR" ]; then
-        find "$DIR" -type f -name '*~' -delete
-    fi
+    [ -d "$DIR" ] && find "$DIR" -type f -name '*~' -delete
 done
 
-# Autoflake: remove unused imports & variables
 echo "=============================="
 echo "Running Autoflake to remove unused imports/variables..."
 echo "=============================="
 for DIR in "${TARGET_DIRS[@]}"; do
-    if [ -d "$DIR" ]; then
-        autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive "$DIR"
-    fi
+    [ -d "$DIR" ] && autoflake --in-place --remove-unused-variables \
+        --remove-all-unused-imports --recursive "$DIR"
 done
 
-# Black formatting
 echo "=============================="
 echo "Running Black for code formatting..."
 echo "=============================="
 for DIR in "${TARGET_DIRS[@]}"; do
-    if [ -d "$DIR" ]; then
-        black "$DIR"
-    fi
+    [ -d "$DIR" ] && black "$DIR"
 done
 
-# Pylint static analysis
 echo "=============================="
 echo "Running Pylint for static analysis..."
 echo "=============================="
 for DIR in "${TARGET_DIRS[@]}"; do
     if [ -d "$DIR" ]; then
-        pylint $(find "$DIR" -name "*.py") || true
+        # Use xargs to handle large file lists and avoid word splitting issues
+        find "$DIR" -name "*.py" -print0 | xargs -0 pylint || true
     fi
 done
 
-# Pytest normal
 echo "=============================="
-echo "Running Pytest (normal output)..."
+echo "Running Pytest..."
 echo "=============================="
-pytest "${TARGET_DIRS[@]}"
+
+# If the user passed a specific target, run only that
+if [ "$TARGET" != "." ]; then
+    pytest "$TARGET"
+else
+    pytest "${TARGET_DIRS[@]}"
+fi

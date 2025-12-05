@@ -1,3 +1,17 @@
+"""
+interface.py
+
+Main entry point for the interactive terminal UI.
+
+Provides a curses-based interface for navigating between different system
+monitoring pages: Dashboard, CPU, Processes, Network, Memory, and Disk I/O.
+
+Features:
+- Keyboard navigation between pages using assigned keys
+- Handles page rendering and switching
+- Exits cleanly on 'q' or 'Q'
+"""
+
 import curses
 from frontend.pages.dashboard_page import render_dashboard
 from frontend.pages.cpu_page import render_cpu
@@ -28,8 +42,20 @@ KEY_TO_PAGE = {
 
 
 def run_interface(stdscr: curses.window) -> None:
-    """Entry point for the interactive curses interface."""
+    """
+    Start the interactive curses-based system monitoring interface.
 
+    This function initializes curses settings and enters the main loop,
+    rendering the currently active page and handling user input to
+    navigate between pages or quit the application.
+
+    Parameters:
+        stdscr : curses.window
+        The main curses window provided by curses.wrapper.
+
+    Returns:
+    None
+    """
     curses.curs_set(0)
     curses.start_color()
     stdscr.nodelay(False)
