@@ -1,7 +1,7 @@
 import curses
 from frontend.pages.dashboard_page import render_dashboard
 from frontend.pages.cpu_page import render_cpu
-from frontend.pages.process_page import render_processes
+from frontend.pages.process_page.process_page import render_processes
 from frontend.pages.memory_page import render_memory
 from frontend.pages.network_page import render_network
 from frontend.pages.disk_page import render_disk
