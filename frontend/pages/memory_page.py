@@ -14,6 +14,7 @@ from backend.memory_info import (
     get_swap_memory,
 )
 
+
 def get_memory_stats() -> dict:
     """Fetch memory and swap usage statistics."""
 

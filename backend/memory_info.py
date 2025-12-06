@@ -2,7 +2,7 @@
 memory_info.py
 
 Provides functions to retrieve and calculate system memory stats from the
-Linux kernal.
+Linux kernel.
 
 Features:
 - Virtual memory usage (total, used, free, available, etc.)
@@ -12,8 +12,8 @@ Features:
 from collections import namedtuple
 from backend.file_helpers import read_file
 
-vmem = namedtuple(
-    "vmem",
+Vmem = namedtuple(
+    "Vmem",
     [
         "total",
         "available",
@@ -28,64 +28,48 @@ vmem = namedtuple(
         "slab",
     ],
 )
-smem = namedtuple("smem", ["total", "used", "free", "percent", "sin", "sout"])
+
+Smem = namedtuple("Smem", ["total", "used", "free", "percent", "sin", "sout"])
 
 
-def parse_meminfo():
+def parse_meminfo() -> dict:
     """
-    Reads memory stats from /proc/meminfo.
+    Reads memory statistics from /proc/meminfo.
 
-    Returns a dictionary where:
-    - keys are the memory labels (e.g. 'MemTotal', 'MemFree')
-    - values are memory size in bytes
+    Returns:
+        dict: Mapping of memory labels to byte values.
     """
+    data = read_file("/proc/meminfo")
+    if data is None:
+        return {}
 
     info = {}
 
-    data = read_file("/proc/meminfo")
-
     for line in data.splitlines():
-
-        # lines without : are skipped
         if ":" not in line:
             continue
 
         key, value = line.split(":", 1)
-
-        # split value string into list of substrings using whitespace
         parts = value.split()
 
-        # skip line if nothing after colon (no usable data)
         if not parts:
             continue
 
-        # convert from kB to bytes and store in the dictionary under the corresponding key
+        # convert kB → bytes
         info[key] = int(parts[0]) * 1024
 
     return info
 
 
-def get_virtual_memory():
+def get_virtual_memory() -> Vmem:
     """
-    Retrives system memory usage stats.
+    Retrieves system virtual memory usage statistics.
 
-    Returns a named tuple (vmem) containing:
-    - total: total physical memory in bytes
-    - available: memory available for allocation in bytes
-    - percent: percentage of memory used
-    - used: used memory in bytes
-    - free: free memory in bytes
-    - active: memory actively used in bytes
-    - inactive: memory inactive but still allocated in bytes
-    - buffers: memory used for buffers in bytes
-    - cached: memory used for cache in bytes
-    - shmem: shared memory in bytes
-    - slab: memory used by kernel slabs in bytes
+    Returns:
+        Vmem: Named tuple containing virtual memory fields.
     """
-
     mem = parse_meminfo()
 
-    # extract key memory fields, default to 0 if not present
     total = mem.get("MemTotal", 0)
     free = mem.get("MemFree", 0)
     buffers = mem.get("Buffers", 0)
@@ -96,13 +80,11 @@ def get_virtual_memory():
     inactive = mem.get("Inactive", 0)
     slab = mem.get("Slab", 0)
 
-    # calculate derived memory values
     available = mem.get("MemAvailable", free + buffers + cached + sreclaimable)
     used = total - available
-
     percent = (used / total * 100) if total else 0
 
-    return vmem(
+    return Vmem(
         total,
         available,
         percent,
@@ -117,22 +99,15 @@ def get_virtual_memory():
     )
 
 
-def get_swap_memory():
+def get_swap_memory() -> Smem:
     """
-    Retrives swap memory stats from the system.
+    Retrieves swap memory usage and I/O statistics.
 
-    Returns a named tuple (smem) containing:
-    - total: total swap memory in bytes
-    - used: used swap memory in bytes
-    - free: free swap memory in bytes
-    - percent: percentage of swap used
-    - sin: total bytes swapped in from disk
-    - sout: total bytes swapped out to disk
+    Returns:
+        Smem: Named tuple containing swap memory fields.
     """
-
     mem = parse_meminfo()
 
-    # extract basic swap memory values
     total = mem.get("SwapTotal", 0)
     free = mem.get("SwapFree", 0)
     used = total - free
@@ -141,18 +116,12 @@ def get_swap_memory():
     sin = 0
     sout = 0
 
-    # read swap I/O stats from /proc/vmstat
-    vmstat = read_file("/proc/vmstat")
-    for line in vmstat.splitlines():
+    vmstat_data = read_file("/proc/vmstat")
+    if vmstat_data is not None:
+        for line in vmstat_data.splitlines():
+            if line.startswith("pswpin"):
+                sin = int(line.split()[1]) * 4096  # pages → bytes
+            elif line.startswith("pswpout"):
+                sout = int(line.split()[1]) * 4096  # pages → bytes
 
-        # pages swapped in from disk to RAM
-        if line.startswith("pswpin"):
-            # convert page count to bytes
-            sin = int(line.split()[1]) * 4096
-
-            # pages swapped out from RAM to disk
-        elif line.startswith("pswpout"):
-            # convert page count to bytes
-            sout = int(line.split()[1]) * 4096
-
-    return smem(total, used, free, percent, sin, sout)
+    return Smem(total, used, free, percent, sin, sout)

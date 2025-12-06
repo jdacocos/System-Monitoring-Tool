@@ -14,8 +14,9 @@ from backend.cpu_info import (
     get_cpu_percent_per_core,
     get_cpu_freq,
     get_logical_cpu_count,
-    get_physical_cpu_count
+    get_physical_cpu_count,
 )
+
 
 def get_cpu_stats() -> dict:
     """Fetch and return key CPU statistics."""
