@@ -16,32 +16,24 @@ done
 echo "=============================="
 echo "Running Autoflake to remove unused imports/variables..."
 echo "=============================="
-for DIR in "${TARGET_DIRS[@]}"; do
-    [ -d "$DIR" ] && autoflake --in-place --remove-unused-variables \
-        --remove-all-unused-imports --recursive "$DIR"
-done
+# Run once on all directories
+autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive "${TARGET_DIRS[@]}"
 
 echo "=============================="
 echo "Running Black for code formatting..."
 echo "=============================="
-for DIR in "${TARGET_DIRS[@]}"; do
-    [ -d "$DIR" ] && black "$DIR"
-done
+# Run once on all directories
+black "${TARGET_DIRS[@]}"
 
 echo "=============================="
 echo "Running Pylint for static analysis..."
 echo "=============================="
-for DIR in "${TARGET_DIRS[@]}"; do
-    if [ -d "$DIR" ]; then
-        # Use xargs to handle large file lists and avoid word splitting issues
-        find "$DIR" -name "*.py" -print0 | xargs -0 pylint || true
-    fi
-done
+# Find all Python files under target directories and run Pylint once
+find "${TARGET_DIRS[@]}" -name "*.py" -print0 | xargs -0 pylint || true
 
 echo "=============================="
 echo "Running Pytest..."
 echo "=============================="
-
 # If the user passed a specific target, run only that
 if [ "$TARGET" != "." ]; then
     pytest "$TARGET"
