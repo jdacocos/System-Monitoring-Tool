@@ -20,17 +20,17 @@ A lightweight, multithreaded system monitoring application designed to retrieve,
    ```
 2. **Install dependencies**
   Make sure you have requirements.txt in the project root, then run:
-  ```bash
-  pip install -r requirements.txt
-  ```
+   ```bash
+   pip install -r requirements.txt
+   ```
 4. **Run the application**
-  ```bash
-  python3 main.py
-  ```
+   ```bash
+   python3 main.py
+   ```
   Some features (e.g., lowering nice values) may require elevated privileges:
-  ```bash
-  sudo python3 main.py
-  ```
+   ```bash
+   sudo python3 main.py
+   ```
 
 ## Features
 
