@@ -4,7 +4,7 @@ process_struct.py
 This module defines the ProcessInfo class, which represents a system process
 with attributes corresponding to the columns of 'ps aux':
 
-    USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, COMMAND
+    USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, NI, COMMAND
 
 ProcessInfo instances store parsed data for use in system monitoring tools
 and other process management components.
@@ -32,6 +32,7 @@ class ProcessInfo:
         stat (str): Process state flags.
         start (str): Process start time (format varies by uptime).
         time (str): Total CPU time ([[dd-]hh:]mm:ss).
+        nice (int): Nice value of the process.
         command (str): Full command that launched the process.
     """
 
@@ -45,6 +46,7 @@ class ProcessInfo:
     stat: str
     start: str
     time: str
+    nice: int
     command: str
 
     def __post_init__(self):

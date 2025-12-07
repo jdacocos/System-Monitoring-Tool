@@ -57,6 +57,7 @@ def test_required_fields_exist(processes: list[ProcessInfo]) -> None:
         assert isinstance(proc.stat, str)
         assert isinstance(proc.start, str)
         assert isinstance(proc.time, str)
+        assert isinstance(proc.nice, int)  # Added nice check
         assert isinstance(proc.command, str)
 
 
@@ -83,7 +84,7 @@ def test_optional_display(processes: list[ProcessInfo]) -> None:
     header = (
         f"{'USER':<10} {'PID':<6} {'%CPU':>5} {'%MEM':>5} "
         f"{'VSZ':>8} {'RSS':>8} {'TTY':<8} {'STAT':<6} "
-        f"{'START':<6} {'TIME':<8} COMMAND"
+        f"{'START':<6} {'TIME':<8} {'NI':>3} COMMAND"
     )
     print("\n" + header)
     print("-" * len(header))
@@ -92,7 +93,7 @@ def test_optional_display(processes: list[ProcessInfo]) -> None:
             f"{proc.user:>8} {proc.pid:>5} {proc.cpu_percent:>5.1f} "
             f"{proc.mem_percent:>5.1f} {proc.vsz:>8} {proc.rss:>8} "
             f"{proc.tty:>7} {proc.stat:>5} {proc.start:>8} {proc.time:>8} "
-            f"{proc.command}"
+            f"{proc.nice:>3} {proc.command}"
         )
 
 

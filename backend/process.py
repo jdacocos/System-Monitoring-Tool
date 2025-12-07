@@ -20,6 +20,7 @@ from backend.process_util.stat import get_process_stat
 from backend.process_util.start import get_process_start
 from backend.process_util.time import get_process_time
 from backend.process_util.command import get_process_command
+from backend.process_util.nice import get_process_nice
 
 
 def _fetch_process(pid: int) -> ProcessInfo | None:
@@ -40,6 +41,7 @@ def _fetch_process(pid: int) -> ProcessInfo | None:
             stat=get_process_stat(pid),
             start=get_process_start(pid),
             time=get_process_time(pid),
+            nice=get_process_nice(pid),
             command=get_process_command(pid),
         )
     except (OSError, ValueError):

@@ -32,6 +32,7 @@ def test_process_info_creation_fields():
         stat="S",
         start="12:34",
         time="00:01:23",
+        nice=0,
         command="/usr/bin/python3",
     )
 
@@ -39,7 +40,7 @@ def test_process_info_creation_fields():
     print(
         f"user={p.user}, pid={p.pid}, cpu_percent={p.cpu_percent}, mem_percent={p.mem_percent}, "
         f"vsz={p.vsz}, rss={p.rss}, tty={p.tty}, stat={p.stat}, start={p.start}, time={p.time}, "
-        f"command={p.command}"
+        f"nice={p.nice}, command={p.command}"
     )
 
     assert p.user == "root"
@@ -52,6 +53,7 @@ def test_process_info_creation_fields():
     assert p.stat == "S"
     assert p.start == "12:34"
     assert p.time == "00:01:23"
+    assert p.nice == 0
     assert p.command == "/usr/bin/python3"
 
 
@@ -69,6 +71,7 @@ def test_process_info_invalid_pid():
         stat="S",
         start="00:00",
         time="00:00:00",
+        nice=0,
         command="invalid",
     )
     assert p.pid > 0
@@ -88,6 +91,7 @@ def test_invalid_cpu_percent_raises():
             stat="S",
             start="00:00",
             time="00:00:01",
+            nice=0,
             command="python",
         )
 
@@ -113,9 +117,11 @@ def test_multiple_processes(user, pid):
         stat="S",
         start="00:00",
         time="00:00:01",
+        nice=0,
         command="python",
     )
 
-    print(f"\nTesting ProcessInfo(user={p.user}, pid={p.pid})")
+    print(f"\nTesting ProcessInfo(user={p.user}, pid={p.pid}, nice={p.nice})")
     assert p.user == user
     assert p.pid == pid
+    assert p.nice == 0
