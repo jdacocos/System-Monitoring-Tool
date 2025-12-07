@@ -19,7 +19,7 @@ git clone https://github.com/your-username/system-monitoring-tool.git
 cd system-monitoring-tool
 ```
 2. **Install dependencies:**
-Make sure you have requirements.txt in the project root, then run:
+Make sure you have requirements.txt in the project root, then run
 ```bash
 pip install -r requirements.txt
 ```
