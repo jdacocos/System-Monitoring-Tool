@@ -41,6 +41,44 @@ SORT_KEYS = {
     "nice": "nice",
 }
 
+# Header text constants
+PROCESS_HEADER_TEMPLATE = (
+    "{user:<{user_w}} "
+    "{pid:<{pid_w}} "
+    "{cpu:>{cpu_w}} "
+    "{mem:>{mem_w}} "
+    "{vsz:>{vsz_w}} "
+    "{rss:>{rss_w}} "
+    "{tty:<{tty_w}} "
+    "{stat:<{stat_w}} "
+    "{nice:>{nice_w}} "
+    "{start:<{start_w}} "
+    "{time:<{time_w}} COMMAND"
+)
+
+# Process text per row constants
+PROCESS_ROW_TEMPLATE = (
+    "{user:<{user_w}} "
+    "{pid:<{pid_w}} "
+    "{cpu:>{cpu_w}} "
+    "{mem:>{mem_w}} "
+    "{vsz:>{vsz_w}} "
+    "{rss:>{rss_w}} "
+    "{tty:<{tty_w}} "
+    "{stat:<{stat_w}} "
+    "{nice:>{nice_w}} "
+    "{start:<{start_w}} "
+    "{time:<{time_w}} "
+)
+# Footer text constants
+FOOTER_NAVIGATION = "[Navigation] [↑/↓] by 1  [PgUp/PgDn] by 10  [Home/End] to Start/End"
+FOOTER_SORT = "[Sort] [C] CPU  [M] MEM  [P] PID  [N] Name  [I] Nice"
+FOOTER_ACTIONS = "[Actions] [S] Stop  [R] Resume  [K] Kill  [Q] Quit"
+FOOTER_TEXT = f"{FOOTER_NAVIGATION}    {FOOTER_SORT}    {FOOTER_ACTIONS}"
+
+# Kill confirmation template
+FOOTER_CONFIRM_KILL_TEMPLATE = "⚠ Kill '{process_name}'? [Y]es / [N]o"
+
 # Critical processes that require confirmation before killing
 # These are typically shells, SSH connections, and system processes
 CRITICAL_PROCESSES = {
