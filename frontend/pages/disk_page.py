@@ -1,3 +1,20 @@
+"""
+disk_page.py
+
+Disk monitoring page for the interactive terminal UI.
+
+Provides real-time information on:
+- Disk usage for mounted partitions (with usage bars)
+- Disk I/O throughput (read/write speeds)
+- Total read/write amounts
+- Historical trends via sparklines
+
+Integrates with the generic page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+"""
+
 import curses
 from collections import deque
 import psutil

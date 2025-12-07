@@ -1,7 +1,22 @@
+"""
+page_helpers.py
+
+Utility functions for managing curses-based frontend pages.
+
+This module provides helpers for rendering and updating interactive pages
+in the terminal UI. It includes a generic page loop that handles:
+- Window creation and layout
+- Page-specific content rendering
+- Keyboard input handling
+- Screen refreshes at configurable intervals
+"""
+
 import curses
 import time
 from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
 from frontend.utils.ui_helpers import init_colors, draw_content_window
+
+# pylint: disable=too-many-arguments, too-many-positional-arguments
 
 
 def run_page_loop(

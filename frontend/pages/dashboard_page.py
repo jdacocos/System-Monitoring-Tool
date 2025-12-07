@@ -1,3 +1,19 @@
+"""
+dashboard_page.py
+
+System dashboard page for the interactive terminal UI.
+
+Provides a high-level overview of system statistics, including:
+- CPU, memory, and disk resource utilization bars
+- Network throughput summary
+- Host information (hostname, uptime, load averages, process count)
+
+Integrates with the generic page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+"""
+
 import curses
 import os
 import platform

@@ -1,3 +1,18 @@
+"""
+memory_page.py
+
+Memory monitoring page for the interactive terminal UI.
+
+Shows RAM and swap usage in real-time, including:
+- Physical memory usage bars and details (total, used, free)
+- Swap memory usage bars and details (total, used, free)
+
+Integrates with the generic page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+"""
+
 import curses
 
 from frontend.utils.ui_helpers import (

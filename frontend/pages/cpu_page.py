@@ -1,3 +1,20 @@
+"""
+cpu_page.py
+
+CPU monitoring page for the interactive terminal UI.
+
+Displays overall and per-core CPU usage in real-time, including:
+- CPU percentage per core and overall
+- CPU frequency information (current, min, max)
+- Logical and physical core counts
+- Usage trends over time via sparklines
+
+Integrates with the generic page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+"""
+
 import curses
 from collections import deque
 

@@ -152,81 +152,124 @@ def process_input_key(
     return None
 
 
-def handle_main_loop_iteration(
-    stdscr: curses.window,
-    window_config: WindowConfig,
-    render_state: dict,
-) -> Optional[int]:
+def _get_window(
+    stdscr: curses.window, window_config: WindowConfig
+) -> Optional[tuple[curses.window, tuple[int, int]]]:
     """
-    Execute one iteration of the main render loop.
-    Handles window management, process display, and input processing
-    for a single loop iteration.
-    """
-    viewer_state = render_state["viewer_state"]
+    Handle terminal size and return a usable content window.
 
-    # Handle terminal size
+    Returns a tuple of the window and its dimensions, or (None, None)
+    if the terminal is too small or the window cannot be created.
+    """
     dimensions = handle_window_resize(stdscr)
     if dimensions == (None, None):
         time.sleep(0.5)
-        return None
+        return None, None
 
-    # Get or create window
-    window_config.win, window_config.last_dimensions = create_or_get_window(
-        stdscr, window_config, dimensions
-    )
+    win, last_dimensions = create_or_get_window(stdscr, window_config, dimensions)
+    if win is None:
+        return None, last_dimensions
+    return win, dimensions
 
-    if window_config.win is None:
-        return handle_empty_window(stdscr)
 
-    # Get window dimensions
-    try:
-        win_height, _ = window_config.win.getmaxyx()
-    except curses.error:
-        window_config.win = None
-        return None
-
-    visible_lines = win_height - VISIBLE_LINE_OFFSET
-
-    # Refresh process data
+def _refresh_process_data(viewer_state: dict) -> list:
+    """
+    Refresh cached process data and return the list of processes.
+    """
     refresh_process_state(viewer_state)
-    processes = viewer_state["cached_processes"]
+    return viewer_state["cached_processes"]
 
-    # Handle empty process list
+
+def _handle_empty_process_list(win: curses.window, processes: list) -> bool:
+    """
+    Display empty process message if no processes exist.
+
+    Returns True if processes were empty and handled, else False.
+    """
     if not processes:
-        display_empty_process_list(window_config.win, win_height)
+        win_height, _ = win.getmaxyx()
+        display_empty_process_list(win, win_height)
         time.sleep(0.1)
-        return None
+        return True
+    return False
 
-    # Update scroll position
-    clamp_and_scroll(viewer_state, visible_lines)
 
-    # Prepare display state
+def _draw_processes_if_needed(
+    win: curses.window, render_state: dict, viewer_state: dict, processes: list
+):
+    """
+    Check if redraw is needed and render the process list.
+    """
     now = time.time()
-    display_state = build_display_state(viewer_state, processes, now)
-
-    # Check if should redraw
     if should_redraw(
         now, render_state["last_draw_time"], viewer_state["needs_refresh"]
     ):
+        display_state = build_display_state(viewer_state, processes, now)
         draw_params = DrawParams(
             processes=processes,
             selected_index=viewer_state["selected_index"],
             scroll_start=viewer_state["scroll_start"],
             sort_mode=viewer_state["sort_mode"],
         )
-        perform_draw(window_config.win, draw_params, display_state)
+        perform_draw(win, draw_params, display_state)
         render_state["last_draw_time"] = now
         viewer_state["needs_refresh"] = False
 
-    # Handle input
+
+def _handle_input(
+    stdscr: curses.window,
+    viewer_state: dict,
+    current_pid: int,
+    window_config: WindowConfig,
+) -> Optional[int]:
+    """
+    Poll for user input and process it.
+    """
     key = stdscr.getch()
-
     if key != -1:
-        return process_input_key(
-            key, viewer_state, render_state["current_pid"], window_config
-        )
-
+        return process_input_key(key, viewer_state, current_pid, window_config)
     return None
+
+
+def handle_main_loop_iteration(
+    stdscr: curses.window,
+    window_config: WindowConfig,
+    render_state: dict,
+) -> Optional[int]:
+    """
+    Execute one iteration of the main render loop for the process manager.
+
+    Handles window management, process display, scrolling, and user input.
+    """
+    viewer_state = render_state["viewer_state"]
+
+    # Get window
+    win, dims = _get_window(stdscr, window_config)
+    if win is None:
+        return handle_empty_window(stdscr)
+    window_config.win = win
+    window_config.last_dimensions = dims
+
+    # Get visible lines
+    try:
+        win_height, _ = win.getmaxyx()
+    except curses.error:
+        window_config.win = None
+        return None
+    visible_lines = win_height - VISIBLE_LINE_OFFSET
+
+    processes = _refresh_process_data(viewer_state)
+
+    if _handle_empty_process_list(win, processes):
+        return None
+
+    clamp_and_scroll(viewer_state, visible_lines)
+
+    _draw_processes_if_needed(win, render_state, viewer_state, processes)
+
+    return _handle_input(
+        stdscr, viewer_state, render_state["current_pid"], window_config
+    )
 
 
 def render_processes(

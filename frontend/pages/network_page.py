@@ -1,7 +1,24 @@
+"""
+disk_page.py
+
+Disk monitoring page for the interactive terminal UI.
+
+Provides real-time information on:
+- Disk usage for mounted partitions (with usage bars)
+- Disk I/O throughput (read/write speeds)
+- Total read/write amounts
+- Historical trends via sparklines
+
+Integrates with the generic page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+"""
+
 import curses
+import time
 from collections import deque
 import psutil
-import time
 
 from frontend.utils.ui_helpers import (
     draw_section_header,
@@ -9,6 +26,10 @@ from frontend.utils.ui_helpers import (
     draw_sparkline,
 )
 from frontend.utils.page_helpers import run_page_loop
+
+# Globals for network history
+upload_history: deque[float] = deque(maxlen=120)
+download_history: deque[float] = deque(maxlen=120)
 
 
 # Replace this function with later with our own calculations
@@ -38,13 +59,9 @@ UPLOAD_HISTORY: deque[float] = deque(maxlen=120)
 DOWNLOAD_HISTORY: deque[float] = deque(maxlen=120)
 
 
-def render_network_stats(
-    win: curses.window,
-    stats: dict,
-    upload_history: deque[float],
-    download_history: deque[float],
-) -> int:
-    """Render upload/download speeds and totals."""
+def render_network_stats(win: curses.window, stats: dict) -> int:
+    """Render upload/download speeds and totals using module-level history."""
+    from frontend.pages.network_page import upload_history, download_history
 
     draw_section_header(win, 1, "Throughput")
     color_sent = 3 if stats["sent_speed"] < 5 else 4
@@ -93,13 +110,10 @@ def render_active_interfaces(
         win.addstr(start_y + 1 + i, 4, f"{iface:<10} {ip_str}")
 
 
-def render_network_page(content_win: curses.window) -> None:
-    """
-    Render Network Monitor page content.
-    """
-    old_net = getattr(render_network_page, "_prev_net", psutil.net_io_counters())
-    old_time = getattr(render_network_page, "_prev_time", time.time())
-
+def _calculate_network_speeds(
+    old_net, old_time: float
+) -> tuple[dict, psutil._common.snetio, float]:
+    """Calculate upload/download speeds and return updated stats."""
     new_net = psutil.net_io_counters()
     new_time = time.time()
     elapsed = max(new_time - old_time, 1e-6)
@@ -115,40 +129,33 @@ def render_network_page(content_win: curses.window) -> None:
         "interfaces": psutil.net_if_addrs(),
     }
 
-    UPLOAD_HISTORY.append(max(0.0, sent_speed))
-    DOWNLOAD_HISTORY.append(max(0.0, recv_speed))
+    return stats, new_net, new_time
 
-    render_network_page._prev_net = new_net
-    render_network_page._prev_time = new_time
 
-    y = 1
-    draw_section_header(content_win, y, "Throughput")
-    content_win.addstr(y + 1, 2, f"Upload   : {sent_speed:6.2f} MB/s")
-    content_win.addstr(y + 2, 2, f"Download : {recv_speed:6.2f} MB/s")
-    content_win.addstr(y + 4, 2, f"Total Sent    : {format_bytes(stats['total_sent'])}")
-    content_win.addstr(y + 5, 2, f"Total Received: {format_bytes(stats['total_recv'])}")
+def _render_throughput(win: curses.window, stats: dict) -> int:
+    """Render upload/download speeds and totals."""
+    draw_section_header(win, 1, "Throughput")
+    win.addstr(2, 2, f"Upload   : {stats['sent_speed']:6.2f} MB/s")
+    win.addstr(3, 2, f"Download : {stats['recv_speed']:6.2f} MB/s")
+    win.addstr(5, 2, f"Total Sent    : {format_bytes(stats['total_sent'])}")
+    win.addstr(6, 2, f"Total Received: {format_bytes(stats['total_recv'])}")
+
+    width = win.getmaxyx()[1] - 6
     draw_sparkline(
-        content_win,
-        y + 7,
-        2,
-        list(UPLOAD_HISTORY),
-        width=content_win.getmaxyx()[1] - 6,
-        label="Upload",
-        unit=" MB/s",
+        win, 8, 2, list(UPLOAD_HISTORY), width=width, label="Upload", unit=" MB/s"
     )
     draw_sparkline(
-        content_win,
-        y + 8,
-        2,
-        list(DOWNLOAD_HISTORY),
-        width=content_win.getmaxyx()[1] - 6,
-        label="Download",
-        unit=" MB/s",
+        win, 9, 2, list(DOWNLOAD_HISTORY), width=width, label="Download", unit=" MB/s"
     )
 
-    # Active interfaces
-    draw_section_header(content_win, y + 10, "Active Interfaces")
-    for i, (iface, addrs) in enumerate(stats["interfaces"].items()):
+    return 11
+
+
+def _render_interfaces(win: curses.window, interfaces: dict, start_y: int) -> None:
+    """Render up to four active network interfaces with IP addresses."""
+    draw_section_header(win, start_y, "Active Interfaces")
+
+    for i, (iface, addrs) in enumerate(interfaces.items()):
         if i >= 4:
             break
         ip_list = [
@@ -157,15 +164,34 @@ def render_network_page(content_win: curses.window) -> None:
             if getattr(addr.family, "name", str(addr.family)) in ("AF_INET", "AF_LINK")
         ]
         ip_str = ", ".join(ip_list) or "No address"
-        content_win.addstr(y + 11 + i, 4, f"{iface:<10} {ip_str}")
+        win.addstr(start_y + 1 + i, 4, f"{iface:<10} {ip_str}")
+
+
+def render_network_page(content_win: curses.window) -> None:
+    """
+    Render Network Monitor page content.
+
+    Uses private helpers to calculate speeds and draw throughput and interfaces.
+    """
+    old_net = getattr(render_network_page, "_prev_net", psutil.net_io_counters())
+    old_time = getattr(render_network_page, "_prev_time", time.time())
+
+    stats, new_net, new_time = _calculate_network_speeds(old_net, old_time)
+
+    upload_history.append(max(0.0, stats["sent_speed"]))
+    download_history.append(max(0.0, stats["recv_speed"]))
+
+    render_network_page._prev_net = new_net
+    render_network_page._prev_time = new_time
+
+    next_y = _render_throughput(content_win, stats)
+    _render_interfaces(content_win, stats["interfaces"], start_y=next_y)
 
 
 def render_network(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
-    """
-    Launch the Network Monitor page loop using the generic `run_page_loop`.
-    """
+    """Launch the Network Monitor page loop using the generic `run_page_loop`."""
     return run_page_loop(
         stdscr,
         title="Network Monitor",
