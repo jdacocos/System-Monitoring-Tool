@@ -63,12 +63,9 @@ def run_interface(stdscr: curses.window) -> None:
     rendering the currently active page and handling user input to
     navigate between pages or quit the application.
 
-    Parameters:
+    Args:
         stdscr : curses.window
         The main curses window provided by curses.wrapper.
-
-    Returns:
-    None
     """
     curses.curs_set(0)
     curses.start_color()
