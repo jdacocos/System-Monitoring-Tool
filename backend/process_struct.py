@@ -1,15 +1,18 @@
 """
 process_struct.py
 
-This module defines the ProcessInfo class, which represents a system process
-with attributes corresponding to the columns of 'ps aux':
+Defines the ProcessInfo class representing a system process.
 
-    USER, PID, %CPU, %MEM, VSZ, RSS, TTY, STAT, START, TIME, NI, COMMAND
+Shows:
+- Mapping of process attributes to 'ps aux' columns
+- Storage of CPU, memory, and other process metrics
+- Validation of field values on initialization
 
-ProcessInfo instances store parsed data for use in system monitoring tools
-and other process management components.
+Integrates with system monitoring tools and backend process utilities to:
+- Represent process information consistently
+- Enable population of process lists with typed data
+- Support further analysis or display in dashboards
 """
-
 from dataclasses import dataclass
 
 
@@ -50,7 +53,12 @@ class ProcessInfo:
     command: str
 
     def __post_init__(self):
-        """Validate fields after initialization."""
+        """
+        Validate process fields after initialization.
+
+        Raises:
+            ValueError: If PID is negative, or if cpu_percent or mem_percent are outside 0-100.
+        """
         if self.pid < 0:
             raise ValueError(f"PID must be non-negative, got {self.pid}")
 

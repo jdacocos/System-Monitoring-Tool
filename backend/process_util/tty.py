@@ -1,17 +1,17 @@
 """
 tty.py
 
-This module provides functions to retrieve the terminal (TTY) associated
-with a process on a Linux system.
+Provides functions to retrieve the terminal (TTY) associated with a process
+on a Linux system.
 
-Functions include:
+Shows:
+- Converting numeric tty_nr from /proc/<pid>/stat to human-readable TTY names
+- Retrieving the TTY name for a given process
+- Returning a default TTY name if the process has no associated terminal
 
-    - _read_tty_nr_to_name: Convert a numeric TTY number from /proc/<pid>/stat
-      into a human-readable TTY name.
-    - get_process_tty: Retrieve the TTY name for a given process, returning
-      a default value if unavailable.
-
-It relies on the /proc filesystem and a predefined TTY map.
+Dependencies:
+- backend.process_constants for TTY constants and mappings
+- backend.file_helpers for safely reading /proc files
 """
 
 from backend.process_constants import ProcessStateIndex, TTYMapIndex
@@ -20,14 +20,15 @@ from backend.file_helpers import read_file
 
 def read_tty_nr_to_name(tty_nr: int) -> str:
     """
-    Convert numeric tty_nr to a readable TTY name.
+    Convert numeric tty_nr to a human-readable TTY name.
 
-    Parameters:
+    Args:
         tty_nr (int): TTY number from /proc/<pid>/stat
 
     Returns:
-        str: TTY name (e.g., 'pts/0', 'tty1') or DEFAULT_TTY if invalid/unrecognized
+        str: TTY name (e.g., 'pts/0', 'tty1') or DEFAULT_TTY if invalid or unrecognized.
     """
+
     if tty_nr <= 0:
         return TTYMapIndex.DEFAULT_TTY
 
@@ -45,15 +46,16 @@ def read_tty_nr_to_name(tty_nr: int) -> str:
 
 
 def get_process_tty(pid: int) -> str:
-    """
-    Returns the readable TTY name for a given process.
+        """
+    Retrieve the human-readable TTY name for a given process.
 
-    Parameters:
+    Args:
         pid (int): Process ID
 
     Returns:
-        str: TTY name (e.g., 'pts/0', 'tty1') or DEFAULT_TTY if unavailable
+        str: TTY name (e.g., 'pts/0', 'tty1') or DEFAULT_TTY if unavailable.
     """
+
     tty_name = TTYMapIndex.DEFAULT_TTY
     stat_path = f"/proc/{pid}/stat"
 

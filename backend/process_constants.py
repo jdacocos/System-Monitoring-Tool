@@ -1,14 +1,20 @@
 """
 process_constants.py
 
-This module defines constants for the System Monitoring Tool.
+Defines constants and index mappings used by the System Monitoring Tool.
 
-Includes:
-- ProcessStateIndex: Index positions of fields in /proc/<pid>/stat
-- PasswdIndex: Index positions of fields in /etc/passwd
-- ProcStatIndex: Index positions for /proc/stat CPU fields
+Shows:
+- Index positions for /proc/<pid>/stat, /proc/stat, /proc/meminfo, /etc/passwd
+- Mappings for TTY numbers and process state flags
+- Time and memory formatting constants
 
-These constants help prevent magic numbers and improve code readability.
+These constants prevent magic numbers, improve code readability,
+and ensure consistent access to system information across modules.
+
+Integrates with backend process utilities to:
+- Parse process, memory, CPU, and TTY data
+- Calculate CPU and memory percentages
+- Map numeric codes to human-readable strings
 """
 
 # pylint: disable=too-few-public-methods

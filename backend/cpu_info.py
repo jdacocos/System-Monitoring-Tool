@@ -3,13 +3,16 @@ cpu_info.py
 
 Provides functions to retrieve CPU information on Linux systems.
 
-Features:
-- Logical CPU count
-- Physical CPU count
+Shows:
+- Logical and physical CPU counts
 - Current CPU frequency
-- Per-core CPU usage and percentage over a time interval
+- Per-core CPU usage percentages over a time interval
+- Composite CPU statistics including overall usage
 
-All data is retrieved using system calls or by parsing kernel files.
+Integrates with backend file helpers to:
+- Parse /proc/cpuinfo for core counts and frequency
+- Parse /proc/stat for CPU time values
+- Calculate CPU usage percentages in a structured format
 """
 
 import os
@@ -25,9 +28,12 @@ CpuFreq = namedtuple("CpuFreq", ["current", "min", "max"])
 
 def get_logical_cpu_count() -> int:
     """
-    Returns the number of logical CPUs in the system
-    using os.cpu_count().
+    Returns the number of logical CPUs in the system.
+
+    Returns:
+        int: Number of logical CPU cores detected via os.cpu_count().
     """
+    
     return os.cpu_count()
 
 
@@ -36,12 +42,10 @@ def get_physical_cpu_count() -> int | None:
     Determines the number of physical CPU cores by counting
     unique (physical id, core id) pairs from /proc/cpuinfo.
 
-    physical id -> CPU socket
-    core id     -> Core within the socket
-
     Returns:
-        int | None: Count of physical cores, or None if unavailable.
+        int | None: Number of physical CPU cores, or None if unavailable.
     """
+ 
     cpuinfo = read_file("/proc/cpuinfo")
     if cpuinfo is None:
         return None
@@ -73,8 +77,12 @@ def get_cpu_freq() -> CpuFreq | None:
     Reads the current CPU frequency (MHz) from /proc/cpuinfo.
 
     Returns:
-        CpuFreq | None: Named tuple with current, min, and max frequency.
+        CpuFreq | None: Named tuple with fields:
+            current (float): Current CPU frequency in MHz.
+            min (float): Minimum CPU frequency (0.0 if unavailable).
+            max (float): Maximum CPU frequency (0.0 if unavailable).
     """
+
     cpuinfo = read_file("/proc/cpuinfo")
     if cpuinfo is None:
         return None
@@ -99,11 +107,12 @@ def get_cpu_freq() -> CpuFreq | None:
 
 def read_proc_stat() -> list[str]:
     """
-    Reads /proc/stat and returns CPU usage lines.
+    Reads /proc/stat and returns lines related to CPU usage.
 
     Returns:
-        list[str]: Lines beginning with 'cpu'.
+        list[str]: Lines beginning with 'cpu' from /proc/stat.
     """
+
     data = read_file("/proc/stat")
     if data is None:
         return []
@@ -116,22 +125,24 @@ def parse_cpu_line(line: str) -> list[int]:
     Parses a single CPU usage line from /proc/stat.
 
     Args:
-        line (str): Line starting with 'cpuX'.
+        line (str): A line starting with 'cpuX'.
 
     Returns:
-        list[int]: CPU time values.
+        list[int]: List of CPU time values as integers.
     """
+
     parts = line.split()
     return list(map(int, parts[1:]))
 
 
 def cpu_totals() -> list[tuple[int, int]]:
     """
-    Computes total time and idle time for each CPU core.
+    Computes total and idle CPU time for each physical/logical core.
 
     Returns:
-        list[tuple[int, int]]: (total_time, idle_time) per core.
+        list[tuple[int, int]]: List of tuples (total_time, idle_time) per core.
     """
+
     lines = read_proc_stat()
 
     core_lines = [
@@ -150,14 +161,15 @@ def cpu_totals() -> list[tuple[int, int]]:
 
 def get_cpu_percent_per_core(interval: float = 0.1) -> list[float]:
     """
-    Calculates per-core CPU usage over a time interval.
+    Calculates per-core CPU usage percentages over a specified interval.
 
     Args:
-        interval (float): Time to sample CPU statistics.
+        interval (float): Time in seconds to sample CPU statistics.
 
     Returns:
-        list[float]: CPU usage percentages for each core.
+        list[float]: CPU usage percentages for each core, rounded to 1 decimal place.
     """
+
     before = cpu_totals()
     time.sleep(interval)
     after = cpu_totals()
@@ -181,18 +193,19 @@ def get_cpu_percent_per_core(interval: float = 0.1) -> list[float]:
 
 
 def get_cpu_stats() -> dict:
-    """
-    Returns a composite CPU statistics dictionary.
+     """
+    Returns a composite dictionary of CPU statistics.
 
     Returns:
         dict: {
-            "overall": float,
-            "per_core": list[float],
-            "freq": CpuFreq | None,
-            "logical": int,
-            "physical": int | None
+            "overall" (float): Average CPU usage across all cores.
+            "per_core" (list[float]): Usage percentages per core.
+            "freq" (CpuFreq | None): CPU frequency information.
+            "logical" (int): Number of logical CPU cores.
+            "physical" (int | None): Number of physical CPU cores.
         }
     """
+     
     per_core = get_cpu_percent_per_core(interval=0.1)
     overall = sum(per_core) / len(per_core) if per_core else 0.0
 

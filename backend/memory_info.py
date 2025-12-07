@@ -1,12 +1,18 @@
 """
 memory_info.py
 
-Provides functions to retrieve and calculate system memory stats from the
-Linux kernel.
+Provides functions to retrieve and calculate system memory statistics
+from the Linux kernel.
 
-Features:
-- Virtual memory usage (total, used, free, available, etc.)
-- Swap memory usage (total, used, free, I/O)
+Shows:
+- Virtual memory usage (total, used, free, available, buffers, cached, etc.)
+- Swap memory usage and I/O statistics
+- Conversion from kB to bytes and calculation of memory percentages
+
+Integrates with backend file helpers to:
+- Read /proc/meminfo for memory statistics
+- Read /proc/vmstat for swap I/O data
+- Provide named tuples for structured memory data
 """
 
 from collections import namedtuple
@@ -66,7 +72,18 @@ def get_virtual_memory() -> Vmem:
     Retrieves system virtual memory usage statistics.
 
     Returns:
-        Vmem: Named tuple containing virtual memory fields.
+        Vmem: Named tuple containing the following fields:
+            total (int): Total virtual memory in bytes.
+            available (int): Available memory in bytes.
+            percent (float): Percentage of used memory.
+            used (int): Used memory in bytes.
+            free (int): Free memory in bytes.
+            active (int): Active memory in bytes.
+            inactive (int): Inactive memory in bytes.
+            buffers (int): Memory used by buffers in bytes.
+            cached (int): Cached memory in bytes.
+            shared (int): Shared memory in bytes.
+            slab (int): Slab memory in bytes.
     """
     mem = parse_meminfo()
 
@@ -101,10 +118,16 @@ def get_virtual_memory() -> Vmem:
 
 def get_swap_memory() -> Smem:
     """
-    Retrieves swap memory usage and I/O statistics.
+    Retrieves swap memory usage and swap I/O statistics.
 
     Returns:
-        Smem: Named tuple containing swap memory fields.
+        Smem: Named tuple containing the following fields:
+            total (int): Total swap memory in bytes.
+            used (int): Used swap memory in bytes.
+            free (int): Free swap memory in bytes.
+            percent (float): Percentage of used swap memory.
+            sin (int): Pages swapped in (converted to bytes).
+            sout (int): Pages swapped out (converted to bytes).
     """
     mem = parse_meminfo()
 

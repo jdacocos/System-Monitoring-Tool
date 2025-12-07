@@ -1,14 +1,18 @@
 """
 file_helper.py
 
-This module provides low-level helper functions for safely reading files on
-Linux systems, including virtual files in /proc. It uses os.open and os.read
-to support direct, unbuffered access and avoid issues with null bytes or
-non-standard file behaviors commonly found in kernel-generated files.
+Provides low-level helper functions for safely reading files on Linux systems,
+including virtual files in /proc.
 
-The helpers return decoded text or structured representations (such as lists of
-lines or space-normalized command lines) while gracefully handling read errors
-by returning None instead of raising exceptions.
+Shows:
+- Direct unbuffered file access using os.open and os.read
+- Graceful handling of read errors by returning None
+- Conversion of raw file contents into decoded strings, lines, or command lines
+
+Integrates with system monitoring utilities to:
+- Safely read /proc files containing process and memory info
+- Normalize command lines from null-separated strings
+- Provide structured or human-readable data without exceptions
 """
 
 import os
@@ -19,11 +23,17 @@ ENCODING = "utf-8"
 
 def read_file(path: str) -> str | None:
     """
-    Low-level file read helper using os.open and os.read.
-    Reads the entire file in chunks and returns a decoded string,
-    or None if the file cannot be read.
+    Reads a file in low-level unbuffered mode and returns its contents as a string.
 
-    Suitable for reading /proc filesystem entries.
+    Args:
+        path (str): Path to the file to read.
+
+    Returns:
+        str | None: Decoded file contents as a string, or None if the file cannot be read.
+    
+    Notes:
+        Suitable for reading /proc filesystem entries that may contain null bytes
+        or non-standard behaviors.
     """
     result = None
 
@@ -48,10 +58,19 @@ def read_file(path: str) -> str | None:
 
 
 def read_lines(path: str) -> list[str] | None:
+     """
+    Reads a file and returns its contents as a list of lines.
+
+    Args:
+        path (str): Path to the file to read.
+
+    Returns:
+        list[str] | None: List of lines if the file is readable, otherwise None.
+    
+    Notes:
+        Uses read_file() internally and applies str.splitlines().
     """
-    Read file using read_file() and return a list of lines.
-    Equivalent to str.splitlines(), returns None if file can't be read.
-    """
+     
     result = None
     data = read_file(path)
 
@@ -63,10 +82,16 @@ def read_lines(path: str) -> list[str] | None:
 
 def read_cmdline(path: str) -> str | None:
     """
-    Reads /proc/<pid>/cmdline which uses null ('\0') separators.
-    Converts null bytes into spaces to produce a readable command line.
-    Returns None if the file cannot be read.
+    Reads /proc/<pid>/cmdline and converts null-separated bytes into a readable string.
+
+    Args:
+        path (str): Path to the cmdline file.
+
+    Returns:
+        str | None: Command line with null bytes replaced by spaces,
+                    or None if the file cannot be read.
     """
+    
     result = None
     data = read_file(path)
 

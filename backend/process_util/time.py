@@ -1,14 +1,18 @@
 """
 time.py
 
-This module provides functions to retrieve and format the total CPU time of a process
+Provides functions to retrieve and format total CPU time of a process
 in a style consistent with the 'TIME' column of the `ps aux` command.
 
-Functions:
-    format_time_column(total_seconds: float) -> str
-        Convert total CPU time in seconds into a ps-style TIME string.
-    get_process_time(pid: int) -> str
-        Returns the total CPU time consumed by a process formatted as '[[dd-]hh:]mm:ss'.
+Shows:
+- Converting total CPU time in seconds into ps-style TIME string
+- Formatting [[dd-]hh:]mm:ss for process CPU usage
+- Reading process CPU jiffies and converting to human-readable time
+
+Dependencies:
+- Standard Python libraries: os
+- backend.process_constants for time constants
+- backend.process_util.cpu_percent for process CPU jiffies
 """
 
 import os
@@ -18,11 +22,20 @@ from backend.process_util.cpu_percent import read_proc_pid_time
 
 def format_time_column(total_seconds: float) -> str:
     """
-    Convert total CPU time in seconds into ps aux TIME format:
-        - M:SS for <1 hour
-        - H:MM:SS for >=1 hour
-        - D-HH:MM:SS for >=1 day
+    Convert total CPU time in seconds into ps aux TIME format.
+
+    Format rules:
+        - M:SS for durations < 1 hour
+        - H:MM:SS for durations >= 1 hour
+        - D-HH:MM:SS for durations >= 1 day
+
+    Args:
+        total_seconds (float): Total CPU time in seconds.
+
+    Returns:
+        str: Formatted TIME string.
     """
+
     total_seconds = int(total_seconds)
 
     days = total_seconds // TimeFormatIndex.SECONDS_PER_DAY
@@ -43,14 +56,16 @@ def format_time_column(total_seconds: float) -> str:
 
 def get_process_time(pid: int) -> str:
     """
-    Returns the total CPU time of a process formatted like the TIME column in ps aux.
+    Retrieve the total CPU time of a process formatted like the TIME column in ps aux.
 
-    Parameters:
-        pid (int): Process ID
+    Args:
+        pid (int): Process ID.
 
     Returns:
-        str: CPU time as '[[dd-]hh:]mm:ss', or default '0:00' if unreadable
+        str: CPU time formatted as '[[dd-]hh:]mm:ss'.
+             Returns '0:00' if the process cannot be read or has no CPU time.
     """
+
     total_jiffies = read_proc_pid_time(pid)
     if total_jiffies <= 0:
         return TimeFormatIndex.DEFAULT_TIME

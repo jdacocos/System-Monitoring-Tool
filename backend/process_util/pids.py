@@ -1,29 +1,34 @@
 """
 pids.py
 
-This module provides functions for retrieving process IDs (PIDs) on a Linux
-system using the /proc filesystem.
+This module provides functionality to retrieve process IDs (PIDs) on a Linux system
+by reading the /proc filesystem.
 
-Functions:
-    get_process_pids() -> list[int]
-        Returns a list of all currently running process IDs.
+Shows:
+- Retrieving all currently running process IDs
+- Filtering numeric entries in /proc to identify valid PIDs
+- Graceful handling of missing or inaccessible /proc directories
 
-Only Python standard libraries and helpers from file_helper.py are used.
+Dependencies:
+- Standard Python library: os
 """
+
 
 import os
 
 
 def get_process_pids(proc_path: str = "/proc") -> list[int]:
     """
-    Return a list of all running process IDs (PIDs) found in /proc.
+    Returns a list of all currently running process IDs (PIDs).
 
-    Parameters:
+    Args:
         proc_path (str): Path to the proc filesystem. Defaults to "/proc".
 
     Returns:
-        list[int]: List of PIDs as integers. Returns empty list if /proc cannot be read.
+        list[int]: List of PIDs as integers.
+                   Returns an empty list if /proc cannot be read or is inaccessible.
     """
+
     pids: list[int] = []
 
     try:

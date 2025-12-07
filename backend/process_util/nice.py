@@ -1,16 +1,17 @@
 """
 nice.py
 
-Provides a function to retrieve the nice value of a process on Linux,
-corresponding to the NI column in `ps aux`.
+This module provides functionality to retrieve the nice value (priority)
+of a process on a Linux system, corresponding to the NI column in `ps aux`.
 
-Uses read_process_stat_fields from stat.py and process_constants.py
-to safely read /proc files and avoid magic numbers.
+Shows:
+- Reading the nice value safely from /proc/<pid>/stat
+- Handling missing PIDs, kernel threads, and permission errors
+- Returning default values when process data is unavailable
 
-Functions:
-    get_process_nice(pid: int) -> int:
-        Returns the nice value of the given process.
-        Handles missing PIDs, permission errors, and kernel threads gracefully.
+Dependencies:
+- backend.process_util.stat for reading process stat fields
+- backend.process_constants for field index constants
 """
 
 from backend.process_util.stat import read_process_stat_fields
@@ -19,12 +20,16 @@ from backend.process_constants import ProcessStateIndex
 
 def get_process_nice(pid: int) -> int:
     """
-    Returns the nice value (priority) of a process.
+    Returns the nice value (priority) of a specific process.
 
-    Fallbacks:
-      - Returns the NI value from /proc/<pid>/stat if available.
-      - Returns 0 for kernel threads or if data cannot be read.
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        int: Nice value of the process (NI column in ps aux).
+             Returns 0 for kernel threads, unreadable processes, or on errors.
     """
+    
     nice_val = 0
 
     try:

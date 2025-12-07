@@ -1,8 +1,19 @@
 """
 start.py
 
-Retrieve and format process start time (ps-style START column) for Linux processes.
-Refactored to use file_helpers.read_file for file reading.
+Provides functions to retrieve and format process start times (ps-style START column)
+for Linux processes using /proc/[pid]/stat and /proc/uptime.
+
+Shows:
+- Converting process start ticks to epoch seconds
+- Formatting start time into HH:MM, MonDD, or YYYY depending on age
+- Handling invalid fields, missing files, and read errors gracefully
+
+Dependencies:
+- Standard Python libraries: os, time
+- backend.file_helpers for safe file reading
+- backend.process_constants for field indices
+- backend.process_util.stat for reading process stat fields
 """
 
 import os
@@ -14,8 +25,17 @@ from backend.file_helpers import read_file
 
 def _interpret_process_start(fields: list[str], _pid: int) -> str:
     """
-    Converts the starttime field from /proc/[pid]/stat into ps-style START column.
+    Helper:
+    Converts /proc/[pid]/stat fields into a ps-style START column string.
+
+    Args:
+        fields (list[str]): List of fields from /proc/[pid]/stat.
+        _pid (int): Process ID (used for error reporting).
+
+    Returns:
+        str: Formatted START column string or an error message if calculation fails.
     """
+
     try:
         start_time_seconds = read_process_start_epoch(fields)
         return _format_start_column(start_time_seconds)
@@ -25,8 +45,19 @@ def _interpret_process_start(fields: list[str], _pid: int) -> str:
 
 def read_process_start_epoch(fields: list[str]) -> float:
     """
-    Calculates the process start time in epoch seconds using /proc/uptime.
+    Calculates process start time in epoch seconds.
+
+    Args:
+        fields (list[str]): List of fields from /proc/[pid]/stat.
+
+    Returns:
+        float: Process start time in epoch seconds.
+
+    Raises:
+        ValueError: If stat fields are invalid or STARTTIME is missing.
+        RuntimeError: If /proc/uptime cannot be read.
     """
+    
     uptime_path = "/proc/uptime"
 
     if not fields or len(fields) <= ProcessStateIndex.STARTTIME:
@@ -49,8 +80,16 @@ def read_process_start_epoch(fields: list[str]) -> float:
 
 def _format_start_column(start_time_seconds: float) -> str:
     """
-    Formats epoch seconds into a ps aux START column string.
+    Helper:
+    Formats epoch seconds into a ps aux-style START column string.
+
+    Args:
+        start_time_seconds (float): Process start time in epoch seconds.
+
+    Returns:
+        str: Formatted start time as HH:MM, MonDD, or YYYY depending on age.
     """
+    
     start_tm = time.localtime(start_time_seconds)
     now_tm = time.localtime(time.time())
 
@@ -62,8 +101,15 @@ def _format_start_column(start_time_seconds: float) -> str:
 
 
 def get_process_start(pid: int) -> str:
+     """
+    Retrieves the ps-style START column for a process.
+
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        str: Formatted start time for the process, or an error message.
     """
-    Return the process start time formatted like 'START' column in ps aux.
-    """
+    
     fields = read_process_stat_fields(pid)
     return _interpret_process_start(fields, pid)

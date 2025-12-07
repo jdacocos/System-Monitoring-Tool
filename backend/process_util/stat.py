@@ -1,22 +1,23 @@
 """
 stat.py
 
-This module provides functions for retrieving and interpreting process
-state information from the Linux /proc/<pid>/stat files. It converts
-raw kernel process states and flags into human-readable strings,
-similar to the STAT column in the `ps` command.
+Provides functions for retrieving and interpreting process state information
+from Linux /proc/<pid>/stat files. Converts raw kernel states and flags into
+human-readable strings, similar to the STAT column in the `ps` command.
 
-Functions include helpers for:
-    - Reading and splitting /proc/<pid>/stat
-    - Extracting base process state
-    - Detecting session leader processes
-    - Determining high/low priority via nice values
-    - Flagging multi-threaded processes
-    - Detecting locked memory pages
-    - Detecting foreground processes
+Shows:
+- Reading and splitting /proc/<pid>/stat fields
+- Extracting base process state (R, S, D, etc.)
+- Detecting session leader processes
+- Flagging high/low priority processes
+- Identifying multi-threaded and locked memory processes
+- Detecting foreground processes
 
-All functions handle missing or inaccessible process files gracefully,
-returning default values when necessary.
+Dependencies:
+- Standard Python libraries: os
+- backend.file_helpers for safe file reading
+- backend.process_constants for field indices and stat maps
+- backend.process_util.tty for terminal lookups
 """
 
 import os
@@ -29,7 +30,16 @@ _STAT_CACHE: dict[int, str] = {}
 
 
 def read_process_stat_fields(pid: int) -> list[str]:
-    """Read /proc/<pid>/stat and return fields as a list of strings."""
+    """
+    Reads /proc/<pid>/stat and splits the content into fields.
+
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        list[str]: List of stat fields. Returns empty list if the file cannot be read.
+    """
+    
     stat_path = f"/proc/{pid}/stat"
     content = read_file(stat_path)
     if not content:
@@ -39,7 +49,16 @@ def read_process_stat_fields(pid: int) -> list[str]:
 
 
 def base_state(fields: list[str]) -> str:
-    """Return the main process state character (R, S, D, etc.)."""
+    """
+    Extracts the base process state character.
+
+    Args:
+        fields (list[str]): Fields from /proc/<pid>/stat.
+
+    Returns:
+        str: Base process state character (e.g., R, S, D). Returns default if unavailable.
+    """
+
     try:
         return StatMapIndex.STATE_MAP.get(
             fields[ProcessStateIndex.STATE], StatMapIndex.DEFAULT_STAT
@@ -49,7 +68,18 @@ def base_state(fields: list[str]) -> str:
 
 
 def _session_leader_flag(fields: list[str], pid: int) -> str:
-    """Return 's' if process is a session leader."""
+    """
+    Helper:
+    Returns 's' if the process is a session leader.
+
+    Args:
+        fields (list[str]): Fields from /proc/<pid>/stat.
+        pid (int): Process ID.
+
+    Returns:
+        str: 's' if session leader, otherwise empty string.
+    """
+
     try:
         return (
             StatMapIndex.FLAG_MAP["session_leader"]
@@ -61,7 +91,17 @@ def _session_leader_flag(fields: list[str], pid: int) -> str:
 
 
 def _priority_flags(fields: list[str]) -> str:
-    """Return '<' or 'N' if process is high or low priority based on nice value."""
+    """
+    Helper:
+    Returns priority flags based on the nice value.
+
+    Args:
+        fields (list[str]): Fields from /proc/<pid>/stat.
+
+    Returns:
+        str: '<' for high priority, 'N' for low priority, or '' otherwise.
+    """
+
     try:
         nice = int(fields[ProcessStateIndex.NICE])
         if nice < StatMapIndex.DEFAULT_PRIORITY:
@@ -74,7 +114,17 @@ def _priority_flags(fields: list[str]) -> str:
 
 
 def _multi_threaded_flag(fields: list[str]) -> str:
-    """Return 'l' if process has more than 1 thread."""
+    """
+    Helper:
+    Returns 'l' if the process has more than 1 thread.
+
+    Args:
+        fields (list[str]): Fields from /proc/<pid>/stat.
+
+    Returns:
+        str: 'l' if multi-threaded, otherwise ''.
+    """
+
     try:
         nthreads = int(fields[ProcessStateIndex.NLWP])
         if nthreads > StatMapIndex.MULTHREAD_THRESH:
@@ -85,7 +135,17 @@ def _multi_threaded_flag(fields: list[str]) -> str:
 
 
 def _locked_flag(fields: list[str]) -> str:
-    """Return 'L' if process has locked memory pages."""
+    """
+    Helper:
+    Returns 'L' if the process has locked memory pages.
+
+    Args:
+        fields (list[str]): Fields from /proc/<pid>/stat.
+
+    Returns:
+        str: 'L' if memory locked, otherwise ''.
+    """
+
     try:
         locked = int(fields[ProcessStateIndex.LOCKED])
         if locked > StatMapIndex.LOCKED_THRESH:
@@ -96,7 +156,17 @@ def _locked_flag(fields: list[str]) -> str:
 
 
 def _foreground_flag(fields: list[str]) -> str:
-    """Return '+' if process is in the foreground process group of its terminal."""
+    """
+    Helper:
+    Returns '+' if the process is in the foreground process group of its terminal.
+
+    Args:
+        fields (list[str]): Fields from /proc/<pid>/stat.
+
+    Returns:
+        str: '+' if foreground process, otherwise ''.
+    """
+
     try:
         tty_nr = int(fields[ProcessStateIndex.TTY_NR])
         if tty_nr <= 0:
@@ -119,9 +189,18 @@ def _foreground_flag(fields: list[str]) -> str:
 
 def get_process_stat(pid: int) -> str:
     """
-    Return human-readable process stat string with caching for sleeping processes.
-    Combines base state and flags for session, priority, locked memory, threads, and foreground.
+    Returns the human-readable STAT string for a process, including
+    base state and flags (session leader, priority, memory lock, threads, foreground).
+
+    Uses caching for sleeping, disk sleep, or zombie processes.
+
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        str: Combined STAT string, or default if the process cannot be read.
     """
+
     fields = read_process_stat_fields(pid)
     if not fields:
         return StatMapIndex.DEFAULT_STAT

@@ -1,16 +1,17 @@
 """
 user.py
 
-This module provides functions for retrieving the username of a process owner
-on a Linux system using the /proc filesystem and /etc/passwd file.
+Provides functions to retrieve the username of a process owner on a Linux system.
 
-Functions:
-    _uid_to_username(uid: int) -> str | None
-        Helper function to convert a numeric UID to a username.
-    get_process_user(pid: int) -> str | None
-        Returns the username owning a specific process.
+Shows:
+- Converting numeric UID to username via /etc/passwd
+- Retrieving the username owning a given process
+- Handling missing processes or permission errors gracefully
 
-The module only uses standard libraries: os, typing.
+Dependencies:
+- Standard Python libraries: os
+- backend.file_helpers for safely reading system files
+- backend.process_constants for /etc/passwd field indices
 """
 
 import os
@@ -20,14 +21,16 @@ from backend.file_helpers import read_file
 
 def _uid_to_username(uid: int) -> str | None:
     """
-    Helper: Convert a UID to a username using /etc/passwd.
+    Helper:
+    Convert a numeric UID to a username using /etc/passwd.
 
-    Parameters:
-        uid (int): User ID to look up
+    Args:
+        uid (int): User ID to look up.
 
     Returns:
         str | None: Username if found, otherwise None.
     """
+
     username: str | None = None
     passwd_path = "/etc/passwd"
 
@@ -52,15 +55,16 @@ def _uid_to_username(uid: int) -> str | None:
 
 
 def get_process_user(pid: int) -> str | None:
-    """
-    Retrieve the username that owns a given process.
+     """
+    Retrieve the username that owns a specific process.
 
-    Parameters:
-        pid (int): Process ID
+    Args:
+        pid (int): Process ID.
 
     Returns:
         str | None: Username if found, otherwise None.
     """
+
     username: str | None = None
     proc_path = f"/proc/{pid}"
 

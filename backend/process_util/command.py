@@ -1,15 +1,17 @@
 """
 command.py
 
-This module provides a function to retrieve the full command line of a process
+Provides functions to retrieve the full command line of a process
 on a Linux system, corresponding to the COMMAND column in `ps aux`.
 
-Uses read_file from file_helpers.py to safely read /proc files.
+Shows:
+- Safe reading of /proc/<pid>/cmdline and /proc/<pid>/comm
+- Fallback handling for kernel threads, zombies, and missing PIDs
+- Normalization of null-separated command lines into space-separated strings
 
-Functions:
-    get_process_command(pid: int) -> str:
-        Returns the full command line of the given process as a string.
-        Handles kernel threads, missing PIDs, and permission errors gracefully.
+Integrates with backend file helpers and process stat utilities to:
+- Retrieve command lines in a consistent format
+- Handle inaccessible or special-state processes gracefully
 """
 
 from backend.process_util.stat import read_process_stat_fields, base_state
@@ -17,14 +19,34 @@ from backend.file_helpers import read_file
 
 
 def _read_cmdline(pid: int) -> str:
-    """Read /proc/<pid>/cmdline and return as a space-separated string."""
+    """
+    Helper:
+    Reads /proc/<pid>/cmdline and converts null bytes to spaces.
+
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        str: Space-separated command line string, or empty string if unavailable.
+    """
+
     cmdline_path = f"/proc/{pid}/cmdline"
     content = read_file(cmdline_path)
     return content.replace("\x00", " ").strip() if content else ""
 
 
 def _read_comm(pid: int) -> str:
-    """Read /proc/<pid>/comm to get the process name (used for kernel threads)."""
+    """
+    Helper:
+    Reads /proc/<pid>/comm to retrieve the process name.
+
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        str: Process name, or "unknown" if the file cannot be read.
+    """
+
     comm_path = f"/proc/{pid}/comm"
     content = read_file(comm_path)
     return content.strip() if content else "unknown"
@@ -32,13 +54,23 @@ def _read_comm(pid: int) -> str:
 
 def get_process_command(pid: int) -> str:
     """
-    Returns the command line of a process (COMMAND column in ps aux).
+    Returns the full command line of a process for the COMMAND column in ps aux.
+
     Fallback order:
-      1. /proc/<pid>/cmdline
-      2. /proc/<pid>/comm for kernel threads
-      3. [zombie] for zombie processes
-      4. [unknown] if all else fails
+        1. /proc/<pid>/cmdline
+        2. /proc/<pid>/comm (for kernel threads)
+        3. [zombie] for zombie processes
+        4. [unknown] if all else fails
+
+    Args:
+        pid (int): Process ID.
+
+    Returns:
+        str: The command line or a descriptive fallback string
+             such as "[zombie]", "[unknown]", "[kernel <pid>]",
+             "[PID not found]", "[Permission denied]", or "[error]".
     """
+    
     result = "[unknown]"
     try:
         # 1. Try full command line first

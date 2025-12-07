@@ -1,22 +1,17 @@
 """
 mem_percent.py
 
-This module provides functions for calculating memory usage
-of processes on a Linux system, including:
+Provides functions for calculating memory usage percentages of processes
+on Linux systems.
 
-- get_process_mem_percent(pid): returns the memory usage
-  of a specific process as a percentage of total system memory.
+Shows:
+- Per-process memory usage as a percentage of total system memory
+- Safe handling of unreadable /proc/<pid>/statm or /proc/meminfo
+- Rounded float values between 0.0 and 100.0
 
-It uses information from:
-
-- /proc/<pid>/statm via get_process_rss
-- /proc/meminfo via _read_meminfo_total
-
-Memory usage percentages are returned as floats between 0.0 and 100.0.
-
-Dependencies:
-    - Standard Python libraries: os
-    - process_util.rss for RSS and total memory readings
+Integrates with backend process_util functions:
+- get_process_rss() to read resident set size (RSS) of a process
+- read_meminfo_total() to read total system memory from /proc/meminfo
 """
 
 from backend.process_constants import MemInfoIndex
@@ -25,14 +20,17 @@ from backend.process_util.rss import get_process_rss, read_meminfo_total
 
 def get_process_mem_percent(pid: int) -> float:
     """
-    Calculate the memory usage percentage of a process.
+    Calculates the memory usage percentage of a specific process.
 
-    Parameters:
-        pid (int): Process ID
+    Args:
+        pid (int): Process ID.
 
     Returns:
-        float: Memory usage percent (0.0 - 100.0)
+        float: Memory usage percentage of the process (0.0 - 100.0).
+               Returns MemInfoIndex.MEM_INVALID if total system memory
+               is unreadable or zero.
     """
+    
     rss_kb = get_process_rss(pid)
     total_mem_kb = read_meminfo_total()
 

@@ -1,12 +1,18 @@
 """
 vsz.py
 
-This module provides a function to retrieve the virtual memory size (VSZ)
-of a process on a Linux system, corresponding to the VSZ column in `ps aux`.
+Provides functions to retrieve the virtual memory size (VSZ) of a process
+on a Linux system, corresponding to the VSZ column in `ps aux`.
 
-Functions:
-    get_process_vsz(pid: int) -> int:
-        Returns the VSZ of the given process in KB.
+Shows:
+- Reading /proc/<pid>/stat to extract VSZ
+- Converting VSZ from bytes to KB
+- Graceful handling of missing processes or malformed data
+
+Dependencies:
+- Standard Python libraries: None
+- backend.file_helpers for safe file reading
+- backend.process_constants for field indices
 """
 
 from backend.process_constants import ProcessStateIndex, ProcStatmIndex
@@ -15,14 +21,15 @@ from backend.file_helpers import read_file
 
 def get_process_vsz(pid: int) -> int:
     """
-    Returns the virtual memory size (VSZ) of a process in KB.
+    Retrieve the virtual memory size (VSZ) of a process in KB.
 
-    Parameters:
-        pid (int): Process ID
+    Args:
+        pid (int): Process ID.
 
     Returns:
-        int: VSZ in KB, or 0 if process cannot be read.
+        int: VSZ in KB, or 0 if the process cannot be read or the value is invalid.
     """
+
     vsz_kb = 0
     stat_content = read_file(f"/proc/{pid}/stat")
 

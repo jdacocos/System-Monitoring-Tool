@@ -1,24 +1,19 @@
 """
 cpu_percent.py
 
-This module provides functions for calculating CPU usage percentages
-for processes and the system on Linux. It reads from the /proc filesystem,
-including /proc/stat for total CPU jiffies and /proc/<pid>/stat for process-specific
-CPU times (utime + stime).
+Provides functions for calculating CPU usage percentages for processes
+and the system on Linux.
 
-Functions:
-    _read_proc_stat_total(): Helper to sum total system CPU jiffies.
-    _read_proc_pid_time(pid): Helper to get total CPU jiffies used by a process.
-    get_process_cpu_percent(pid): Calculates CPU usage percentage for a process
-        without blocking.
+Shows:
+- Total system CPU jiffies reading from /proc/stat
+- Per-process CPU jiffies reading from /proc/<pid>/stat
+- CPU usage percentage calculation using cached previous readings
+- Cache management to support repeated calls without blocking
 
-All functions rely only on standard libraries and file_helpers.
-
-Notes:
-    - CPU jiffies are the basic units of CPU time used by the Linux kernel.
-    - Percentages are calculated relative to total system CPU time over the interval.
-    - Returns CPU_PERCENT_INVALID if calculation cannot be performed (e.g., process
-      exits, /proc unavailable, or delta too small).
+Integrates with backend file helpers and process constants to:
+- Compute process CPU usage relative to total system CPU
+- Handle missing or inaccessible processes gracefully
+- Avoid recalculating CPU usage from scratch for each call
 """
 
 import os
@@ -32,12 +27,14 @@ _LAST_PROC_JIFFIES: dict[int, int] = {}
 
 def _read_proc_stat_total() -> int:
     """
-    Return the total system CPU jiffies from /proc/stat.
+    Helper:
+    Returns the total system CPU jiffies from /proc/stat.
 
     Returns:
-        int: Sum of USER, NICE, SYSTEM, and IDLE jiffies. Returns 0 if /proc/stat
-             cannot be read or is malformed.
+        int: Sum of USER, NICE, SYSTEM, and IDLE jiffies.
+             Returns 0 if /proc/stat cannot be read or is malformed.
     """
+
     total_jiffies = 0
     stat_path = "/proc/stat"
     lines = read_lines(stat_path)
@@ -66,15 +63,16 @@ def _read_proc_stat_total() -> int:
 
 def read_proc_pid_time(pid: int) -> int:
     """
-    Return the total CPU jiffies (utime + stime) used by a specific process.
+    Returns the total CPU jiffies (utime + stime) used by a specific process.
 
-    Parameters:
+    Args:
         pid (int): Process ID.
 
     Returns:
-        int: Sum of utime and stime jiffies for the process. Returns 0 if the
-             process does not exist or cannot be read.
+        int: Sum of utime and stime jiffies for the process.
+             Returns 0 if the process does not exist or cannot be read.
     """
+
     stat_path = f"/proc/{pid}/stat"
     total_proc_jiffies = 0
     content: str | None = read_file(stat_path)
@@ -96,16 +94,17 @@ def read_proc_pid_time(pid: int) -> int:
 
 def get_process_cpu_percent(pid: int) -> float:
     """
-    Return the CPU usage percentage of a process using cached previous readings.
+    Returns the CPU usage percentage of a process using cached previous readings.
 
-    Parameters:
+    Args:
         pid (int): Process ID.
 
     Returns:
-        float: CPU usage percentage for the process. Returns CpuStatIndex.CPU_PERCENT_INVALID
-               if previous readings are missing, the process does not exist, or delta is too small.
+        float: CPU usage percentage for the process.
+               Returns CpuStatIndex.CPU_PERCENT_INVALID if previous readings
+               are missing, the process does not exist, or delta is too small.
     """
-
+    
     cpu_percent = CpuStatIndex.CPU_PERCENT_INVALID
 
     proc_jiffies_current = read_proc_pid_time(pid)

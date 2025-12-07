@@ -1,15 +1,19 @@
 """
 rss.py
 
-This module provides functions for retrieving the resident set size (RSS) of
-processes and total system memory on a Linux system. RSS is the portion of
-a process's memory that is held in RAM, excluding swapped-out pages.
+This module provides functions to retrieve the resident set size (RSS) of
+processes and total system memory on a Linux system. RSS represents the
+portion of a process's memory held in RAM, excluding swapped-out pages.
 
-Functions:
-    read_meminfo_total(): Read total system memory from /proc/meminfo.
-    get_process_rss(pid: int): Retrieve the RSS of a given process in KB.
+Shows:
+- Reading total system memory from /proc/meminfo
+- Retrieving per-process RSS from /proc/<pid>/statm
+- Handling missing files, permission errors, and invalid values gracefully
 
-The module only uses standard libraries and file_helpers.py.
+Dependencies:
+- Standard Python library: os
+- backend.file_helpers for safe file reading
+- backend.process_constants for field indices
 """
 
 import os
@@ -52,15 +56,16 @@ def read_meminfo_total() -> int:
 
 def get_process_rss(pid: int) -> int:
     """
-    Returns the resident set size (RSS) of a process in KB.
-    RSS is the portion of a process's memory held in RAM, not including swapped-out pages.
+    Retrieves the resident set size (RSS) of a process in KB.
 
-    Parameters:
-        pid (int): Process ID
+    Args:
+        pid (int): Process ID.
 
     Returns:
-        int: RSS in KB, or 0 if the process does not exist or cannot be read.
+        int: RSS in KB for the process.
+             Returns 0 if the process does not exist, cannot be read, or an error occurs.
     """
+    
     rss_kb = 0
     statm_content: str | None = read_file(f"/proc/{pid}/statm")
 

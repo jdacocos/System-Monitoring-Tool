@@ -1,10 +1,20 @@
 """
 process.py
 
-This module collects process information on a Linux system
-and populates a list of ProcessInfo objects representing all running processes.
+Collects and returns information about all running processes on a Linux system.
 
-It uses cached CPU percentages to optimize performance in single-core environments.
+Shows:
+- Safe fetching of process data per PID
+- CPU and memory percentage caching for efficiency
+- Process attributes including user, PID, memory, CPU, TTY, status, and command
+
+Integrates with the backend utilities to retrieve:
+- User information
+- CPU and memory usage
+- Virtual memory and RSS
+- TTY and status
+- Start time and CPU time
+- Nice value and command line
 """
 
 from typing import List
@@ -25,9 +35,15 @@ from backend.process_util.nice import get_process_nice
 
 def _fetch_process(pid: int) -> ProcessInfo | None:
     """
-    Fetch a single PID's ProcessInfo safely.
+    Helper:
+    Safely fetches detailed information about a single process given its PID.
 
-    Returns None if the process is inaccessible, exited, or invalid.
+    Args:
+        pid (int): The process ID to retrieve information for.
+
+    Returns:
+        ProcessInfo | None: A ProcessInfo object with the process details,
+        or None if the process is inaccessible, exited, or invalid.
     """
     try:
         return ProcessInfo(
@@ -50,7 +66,10 @@ def _fetch_process(pid: int) -> ProcessInfo | None:
 
 def populate_process_list() -> List[ProcessInfo]:
     """
-    Populate a list of ProcessInfo instances for all running processes.
+    Populate a list of ProcessInfo objects for all running processes on the system.
+
+    Returns:
+        List[ProcessInfo]: A list containing ProcessInfo objects for each accessible process.
     """
     process_list: List[ProcessInfo] = []
     pids = get_process_pids()
