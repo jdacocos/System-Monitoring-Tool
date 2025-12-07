@@ -14,15 +14,15 @@ A lightweight, multithreaded system monitoring application designed to retrieve,
 ### **Setup**
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/system-monitoring-tool.git
-   cd system-monitoring-tool
-   ```
+```bash
+git clone https://github.com/your-username/system-monitoring-tool.git
+cd system-monitoring-tool
+```
 2. **Install dependencies**
-  Make sure you have requirements.txt in the project root, then run:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Make sure you have requirements.txt in the project root, then run:
+```bash
+pip install -r requirements.txt
+```
 4. **Run the application**
    ```bash
    python3 main.py
