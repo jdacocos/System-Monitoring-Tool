@@ -1,8 +1,28 @@
 """
-pages/process_page/process_display.py
+process_display.py
 
-Display and rendering functions for the process manager UI.
-Handles all visual presentation of process information.
+Display and rendering functions for the Process Manager UI.
+
+Shows:
+- Scrollable process list with selection highlighting
+- Colored process rows for normal, critical, and selected processes
+- Headers, separators, and aligned column formatting
+- Footer messages for renice input, kill confirmation, errors, and success
+- Default navigation and action help text
+
+Integrates with the generic UI page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+
+Dependencies:
+- curses (for terminal rendering)
+- dataclasses (for DisplayState and DrawParams)
+- typing.List
+- frontend.utils.ui_helpers (draw_section_header)
+- frontend.pages.process_page.process_page_constants
+- frontend.pages.process_page.process_operations
+- backend.process_struct (ProcessInfo)
 """
 
 import curses
@@ -57,10 +77,17 @@ class DrawParams:
 
 def _get_process_color(proc: ProcessInfo, is_selected: bool) -> int:
     """
+    Helper:
     Determine the color pair for a process based on its state.
-    Returns appropriate color for critical/normal processes
-    and selected/unselected states.
+
+    Args:
+        proc (ProcessInfo): The process information object.
+        is_selected (bool): Whether the row is currently selected.
+
+    Returns:
+        int: Curses color pair for rendering this process row.
     """
+
     is_critical = is_critical_process(proc)
 
     if is_selected:
@@ -71,9 +98,17 @@ def _get_process_color(proc: ProcessInfo, is_selected: bool) -> int:
 
 def _format_process_line(proc: ProcessInfo, width: int) -> str:
     """
-    Format a process info into a display line using PROCESS_HEADER_TEMPLATE.
-    Ensures the line fits within the window width, leaving space for the right border.
+    Helper:
+    Format a process info object into a displayable row string.
+
+    Args:
+        proc (ProcessInfo): The process information object.
+        width (int): Maximum width for the display line.
+
+    Returns:
+        str: Formatted process row text.
     """
+
     tty_display = (proc.tty or "?")[: COL_WIDTHS["tty"] - 1]
 
     # Calculate the available width for the command column
@@ -112,8 +147,18 @@ def _format_process_line(proc: ProcessInfo, width: int) -> str:
 
 def draw_process_row(
     win: curses.window, y: int, proc: ProcessInfo, width: int, is_selected: bool
-):
-    """Draw a single process row in the window."""
+) -> None:
+    """
+    Draw a single process row in the given window.
+
+    Args:
+        win (curses.window): Window object to draw in.
+        y (int): Y-coordinate to draw the row.
+        proc (ProcessInfo): Process to display.
+        width (int): Window width.
+        is_selected (bool): Whether this row is selected.
+    """
+
     line = _format_process_line(proc, width - 1)  # leave last column for │
     color_pair = _get_process_color(proc, is_selected)
     try:
@@ -129,7 +174,17 @@ def draw_process_row(
 
 
 def _format_header() -> str:
-    """Format the process list header with proper spacing and alignment."""
+    """
+    Helper:
+    Format the process list header line with proper spacing and alignment.
+
+    Uses PROCESS_HEADER_TEMPLATE and column widths from process_page_constants
+    to generate a consistent header for the process table display.
+
+    Returns:
+        str: Formatted header string ready for display in the curses window.
+    """
+
     return PROCESS_HEADER_TEMPLATE.format(
         user="USER",
         pid="PID",
@@ -156,12 +211,15 @@ def _format_header() -> str:
     )
 
 
-def clear_content_area(win: curses.window, height: int):
+def clear_content_area(win: curses.window, height: int) -> None:
     """
-    Clear the process list content area.
-    Erases all lines between header and footer to prepare
-    for fresh process list rendering.
+    Clear all lines between the header and footer.
+
+    Args:
+        win (curses.window): Window to clear.
+        height (int): Window height.
     """
+
     for y in range(FIRST_DATA_ROW, height - FOOTER_OFFSET):
         try:
             win.move(y, 2)
@@ -170,10 +228,15 @@ def clear_content_area(win: curses.window, height: int):
             pass
 
 
-def draw_header(win: curses.window, width: int):
+def draw_header(win: curses.window, width: int) -> None:
     """
-    Draw the header section with left and right borders and horizontal separator line.
+    Draw the process table header with borders and separator.
+
+    Args:
+        win (curses.window): Window to draw in.
+        width (int): Window width.
     """
+
     header = _format_header()
     try:
         # Draw left border │
@@ -201,12 +264,17 @@ def draw_process_rows(
     draw_params: DrawParams,
     visible_lines: int,
     height: int,
-):
+) -> None:
     """
-    Draw all visible process rows.
-    Iterates through visible processes and renders each row
-    with appropriate selection highlighting.
+    Draw all visible process rows in the list.
+
+    Args:
+        win (curses.window): Window to draw in.
+        draw_params (DrawParams): Parameters including processes, scroll, selection, and sort.
+        visible_lines (int): Number of visible lines in the window.
+        height (int): Window height.
     """
+
     width = win.getmaxyx()[1]
     end_index = min(
         draw_params.scroll_start + visible_lines, len(draw_params.processes)
@@ -223,6 +291,7 @@ def draw_process_rows(
 
 def _draw_footer_border(win: curses.window, height: int) -> None:
     """
+    Helper:
     Draw the right border of the footer line.
 
     Parameters:
@@ -242,6 +311,7 @@ def _draw_footer_border(win: curses.window, height: int) -> None:
 
 def _clear_footer_line(win: curses.window, height: int) -> None:
     """
+    Helper:
     Clear the footer line in preparation for new content.
 
     Parameters:
@@ -259,6 +329,7 @@ def _draw_renice_prompt(
     win: curses.window, height: int, footer_width: int, display_state: DisplayState
 ) -> None:
     """
+    Helper:
     Draw the renice input prompt in the footer.
 
     Parameters:
@@ -283,6 +354,7 @@ def _draw_kill_confirmation(
     win: curses.window, height: int, footer_width: int, display_state: DisplayState
 ) -> None:
     """
+    Helper:
     Draw the kill confirmation prompt in the footer.
 
     Parameters:
@@ -306,6 +378,7 @@ def _draw_error_message(
     win: curses.window, height: int, footer_width: int, message: str
 ) -> None:
     """
+    Helper:
     Draw an error message in the footer.
 
     Parameters:
@@ -326,6 +399,7 @@ def _draw_success_message(
     win: curses.window, height: int, footer_width: int, message: str
 ) -> None:
     """
+    Helper:
     Draw a success message in the footer.
 
     Parameters:
@@ -344,6 +418,7 @@ def _draw_success_message(
 
 def _draw_default_footer(win: curses.window, height: int, footer_width: int) -> None:
     """
+    Helper:
     Draw the default footer with navigation, sort, and action help text.
 
     Parameters:
@@ -395,7 +470,16 @@ def draw_footer(win: curses.window, height: int, display_state: DisplayState) ->
 def draw_process_list(
     win: curses.window, draw_params: DrawParams, display_state: DisplayState
 ) -> None:
-    """Render scrollable process list."""
+    """
+    Render the complete scrollable process list with header and footer.
+
+    Args:
+        win (curses.window): Window to draw in.
+        draw_params (DrawParams): Parameters for visible
+            processes, scroll, selection, and sort mode.
+        display_state (DisplayState): Current state for footer messages and confirmations.
+    """
+
     height, width = win.getmaxyx()
 
     clear_content_area(win, height)
@@ -412,11 +496,15 @@ def draw_process_list(
     draw_footer(win, height, display_state)
 
 
-def display_empty_process_list(win: curses.window, win_height: int):
+def display_empty_process_list(win: curses.window, win_height: int) -> None:
     """
-    Display message when no processes are found.
-    Clears content area and shows "No processes found" message.
+    Display a message indicating no processes are available.
+
+    Args:
+        win (curses.window): Window to draw in.
+        win_height (int): Window height for clearing content area.
     """
+
     try:
         clear_content_area(win, win_height)
         win.addstr(FIRST_DATA_ROW, 2, "No processes found.")
@@ -427,10 +515,14 @@ def display_empty_process_list(win: curses.window, win_height: int):
 
 def perform_draw(
     win: curses.window, draw_params: DrawParams, display_state: DisplayState
-):
+) -> None:
     """
-    Execute the screen drawing operations.
-    Draws the process list and refreshes the display.
+    Execute full screen drawing operations and refresh.
+
+    Args:
+        win (curses.window): Window to draw in.
+        draw_params (DrawParams): Parameters for rendering processes.
+        display_state (DisplayState): Current display state for footer and messages.
     """
     draw_process_list(win, draw_params, display_state)
     try:

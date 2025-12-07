@@ -1,8 +1,28 @@
 """
-pages/process_page/process_operations.py
+process_operations.py
 
-Backend operations for process management including kill, pause, resume,
-and nice value adjustment.
+Backend operations for process management, including killing, pausing,
+resuming, and adjusting process priority (nice value).
+
+Shows:
+- Checking if a process is critical
+- Retrieving, sorting, and displaying process information
+- Process actions: kill, pause, resume, renice
+- Utility functions for process status, stopped/zombie checks, and display name
+
+Integrates with the process manager page loop to handle:
+- Permission and safety checks
+- Process list updates
+- User-driven actions on processes
+
+Dependencies:
+- os
+- signal
+- time
+- typing
+- backend.process (populate_process_list)
+- backend.process_struct (ProcessInfo)
+- frontend.pages.process_page.process_page_constants
 """
 
 import os
@@ -23,7 +43,16 @@ from frontend.pages.process_page.process_page_constants import (
 
 
 def is_critical_process(proc: ProcessInfo) -> bool:
-    """Check if a process is critical (dangerous to kill)."""
+    """
+    Check if a process is critical and should not be killed.
+
+    Args:
+        proc (ProcessInfo): The process to check.
+
+    Returns:
+        bool: True if process is critical (e.g., PID 1 or matches critical names), False otherwise.
+    """
+
     if not proc.command:
         return False
 
@@ -40,10 +69,17 @@ def is_critical_process(proc: ProcessInfo) -> bool:
 
 def _extract_command_name(command: str) -> str:
     """
-    Extract base command name from full command string.
-    Removes path prefixes, leading dashes (login shells),
-    and command arguments to get just the base command name.
+    Extract the base command name from a full command string.
+
+    Removes path prefixes, leading dashes (login shells), and command arguments.
+
+    Args:
+        command (str): Full command string.
+
+    Returns:
+        str: Base command name.
     """
+
     cmd = command.strip()
 
     # Remove leading dash (for login shells like -bash, -zsh, etc.)
@@ -59,7 +95,16 @@ def _extract_command_name(command: str) -> str:
 
 
 def get_all_processes(sort_mode: str = "cpu") -> List[ProcessInfo]:
-    """Return all processes sorted by the given sort_mode."""
+    """
+    Retrieve all processes, optionally sorted by a given sort mode.
+
+    Args:
+        sort_mode (str, optional): Key to sort processes by (default: "cpu").
+
+    Returns:
+        List[ProcessInfo]: List of sorted ProcessInfo objects.
+    """
+
     processes = populate_process_list()
     sort_attr = SORT_KEYS.get(sort_mode, "cpu_percent")
     reverse = sort_attr in ("cpu_percent", "mem_percent")
@@ -69,15 +114,16 @@ def get_all_processes(sort_mode: str = "cpu") -> List[ProcessInfo]:
 
 def kill_process(pid: int) -> None:
     """
-    Attempt to kill a process, trying SIGTERM then SIGKILL.
+    Attempt to kill a process, first with SIGTERM, then with SIGKILL if still alive.
 
-    Sends SIGTERM for graceful shutdown, waits briefly, then
-    sends SIGKILL if process still exists.
+    Args:
+        pid (int): Process ID to kill.
 
     Raises:
-        PermissionError: If lacking permissions to kill the process
-        ProcessLookupError: If process doesn't exist
+        PermissionError: If lacking permission to kill.
+        ProcessLookupError: If process does not exist.
     """
+
     os.kill(pid, SIGTERM)
 
     time.sleep(KILL_RETRY_DELAY)
@@ -121,14 +167,15 @@ def set_process_priority(pid: int, nice_value: int) -> None:
     Set the nice value (priority) of a process.
 
     Args:
-        pid: Process ID to adjust
-        nice_value: Nice value (-20 to 19, lower = higher priority)
+        pid (int): Process ID.
+        nice_value (int): Nice value (-20 to 19, lower = higher priority).
 
     Raises:
-        PermissionError: If lacking permissions to change priority
-        ProcessLookupError: If process doesn't exist
-        ValueError: If nice_value is out of range
+        PermissionError: If lacking permission.
+        ProcessLookupError: If process does not exist.
+        ValueError: If nice_value is out of range.
     """
+
     if not -20 <= nice_value <= 19:
         raise ValueError("Nice value must be between -20 and 19")
 

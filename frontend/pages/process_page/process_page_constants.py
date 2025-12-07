@@ -1,19 +1,26 @@
 """
-pages/process_page/process_page_constants.py
+process_page_constants.py
 
 Constants and configuration values for the process manager page.
 
 This module centralizes all magic numbers, configuration parameters,
 and constant values used throughout the process management interface.
 
-Categories:
-- Column width specifications for the process table display
-- Sort key mappings for different sorting modes
-- Critical process identifiers for kill protection
-- Timing intervals for refresh and display updates
-- OS signal numbers for process management
-- UI positioning and layout constants
+Shows:
+- Column widths and templates for the process table display
+- Sort key mappings and key bindings for sorting
+- Action key mappings (kill, pause, resume, renice)
+- Critical process identifiers for safe kill protection
+- Timing intervals for refresh, draw, error display, and kill retries
+- Input key constants and input configuration
+- Navigation constants (page jumps, visible offsets)
+- OS signal numbers used for process management
+- UI positioning for headers, footers, and data rows
 - Color pair assignments for different UI states
+
+Integrates with:
+- process_page input handling and display rendering
+- process_operations for safe and controlled process actions
 """
 
 # Column widths for process table display

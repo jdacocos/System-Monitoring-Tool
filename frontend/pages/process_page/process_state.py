@@ -1,8 +1,29 @@
 """
 pages/process_page/process_state.py
 
-State management for the process manager.
-Handles viewer state, message display, and process operations.
+State management and operations for the interactive process manager.
+
+This module handles:
+- Initialization of the curses viewer and default state
+- Selection clamping and scrolling logic
+- Display state construction with error, success, renice, and kill confirmations
+- Process operations including pause, resume, kill, and renice
+- User input handling for standard, renice, and kill confirmation modes
+- Helper functions for error/success message handling and renice input validation
+
+Integrates with:
+- process_page_constants for timing and input constants
+- process_operations for process management operations (kill, pause, resume, renice)
+- process_display for building display state
+- process_input for interpreting keyboard input
+- process_struct for ProcessInfo objects
+- frontend.utils.ui_helpers for color initialization
+
+Dependencies:
+- curses
+- os
+- time
+- typing
 """
 
 import curses
@@ -40,7 +61,17 @@ from backend.process_struct import ProcessInfo
 
 
 def init_process_viewer(stdscr: curses.window) -> dict:
-    """Initialize curses and default state for the process viewer."""
+    """
+    Initialize the curses viewer and default state for the process manager.
+
+    Args:
+        stdscr (curses.window): The main curses window.
+
+    Returns:
+        dict: Initial state dictionary containing selection, scroll, cached processes,
+              refresh timings, error/success messages, kill/renice state, etc.
+    """
+
     init_colors()
     curses.curs_set(0)
     stdscr.nodelay(True)
@@ -66,7 +97,14 @@ def init_process_viewer(stdscr: curses.window) -> dict:
 
 
 def clamp_and_scroll(state: dict, visible_lines: int) -> None:
-    """Clamp selected_index and adjust scroll_start in state."""
+    """
+    Clamp selected_index and adjust scroll_start to keep selection visible.
+
+    Args:
+        state (dict): Process viewer state.
+        visible_lines (int): Number of visible lines in the process window.
+    """
+
     processes = state["cached_processes"]
     state["selected_index"] = max(0, min(state["selected_index"], len(processes) - 1))
 
@@ -85,21 +123,41 @@ def clamp_and_scroll(state: dict, visible_lines: int) -> None:
 
 
 def set_error_message(state: dict, message: str):
-    """Helper to set error message and timestamp."""
+    """
+    Set an error message in the state with a timestamp.
+
+    Args:
+        state (dict): Process viewer state.
+        message (str): Error message text.
+    """
+
     state["error_message"] = message
     state["error_time"] = time.time()
     state["needs_refresh"] = True
 
 
 def set_success_message(state: dict, message: str):
-    """Helper to set success message and timestamp."""
+    """
+    Set a success message in the state with a timestamp.
+
+    Args:
+        state (dict): Process viewer state.
+        message (str): Success message text.
+    """
+
     state["success_message"] = message
     state["success_time"] = time.time()
     state["needs_refresh"] = True
 
 
 def refresh_process_state(state: dict) -> None:
-    """Refresh cached processes if needed."""
+    """
+    Refresh the cached process list if enough time has passed or a forced refresh is requested.
+
+    Args:
+        state (dict): Process viewer state containing sort mode and cached processes.
+    """
+
     now = time.time()
 
     if state["needs_refresh"] or (
@@ -113,8 +171,19 @@ def build_display_state(
     state: dict, processes: List[ProcessInfo], now: float
 ) -> DisplayState:
     """
-    Build display state including error messages, success messages, and confirmations.
+    Build a DisplayState object for rendering the process viewer.
+
+    Includes error/success messages, kill confirmation, renice mode, and target process info.
+
+    Args:
+        state (dict): Process viewer state.
+        processes (List[ProcessInfo]): Current list of processes.
+        now (float): Current timestamp.
+
+    Returns:
+        DisplayState: State used by the renderer.
     """
+
     display_state = DisplayState()
 
     # Check for error message
@@ -153,10 +222,15 @@ def build_display_state(
 
 def handle_kill_confirmation(key: int, state: dict) -> None:
     """
-    Handle kill confirmation input.
-    Processes Y/N/ESC keys during kill confirmation mode and
-    executes or cancels the kill operation.
+    Process kill confirmation input.
+
+    Executes or cancels process termination based on key pressed (Y/N/ESC).
+
+    Args:
+        key (int): Key code.
+        state (dict): Process viewer state.
     """
+
     if key in (ord("y"), ord("Y")):
         pid_to_kill = state["kill_target_pid"]
         try:
@@ -176,9 +250,14 @@ def handle_kill_confirmation(key: int, state: dict) -> None:
 
 def handle_pause_request(selected_proc: ProcessInfo, state: dict, current_pid: int):
     """
-    Handle a pause request for the selected process.
-    Checks if process can be paused and sends SIGSTOP.
+    Handle a pause (SIGSTOP) request for a process with validation.
+
+    Args:
+        selected_proc (ProcessInfo): Selected process.
+        state (dict): Process viewer state.
+        current_pid (int): Current process ID.
     """
+
     # Check if trying to pause ourselves
     if selected_proc.pid in (current_pid, os.getpid()):
         set_error_message(state, "Cannot pause own process")
@@ -216,9 +295,14 @@ def handle_pause_request(selected_proc: ProcessInfo, state: dict, current_pid: i
 
 def handle_resume_request(selected_proc: ProcessInfo, state: dict, current_pid: int):
     """
-    Handle a resume request for the selected process.
-    Checks if process is stopped and sends SIGCONT.
+    Handle a resume (SIGCONT) request for a stopped process.
+
+    Args:
+        selected_proc (ProcessInfo): Selected process.
+        state (dict): Process viewer state.
+        current_pid (int): Current process ID.
     """
+
     # Check if trying to resume ourselves (shouldn't happen but be safe)
     if selected_proc.pid in (current_pid, os.getpid()):
         set_error_message(state, "Cannot resume own process")
@@ -251,10 +335,17 @@ def handle_resume_request(selected_proc: ProcessInfo, state: dict, current_pid: 
 
 def handle_kill_request(selected_proc: ProcessInfo, state: dict, current_pid: int):
     """
-    Handle a kill request for the selected process.
-    Checks if process is self or critical, requiring confirmation
-    for critical processes and immediate kill for normal processes.
+    Handle kill request for a process with checks for self, critical, or zombie processes.
+
+    Args:
+        selected_proc (ProcessInfo): Selected process.
+        state (dict): Process viewer state.
+        current_pid (int): Current process ID.
+
+    Returns:
+        Optional[int]: Quit key code if killing self, else None.
     """
+
     # Check if killing ourselves
     if selected_proc.pid in (current_pid, os.getpid()):
         return ord("q")
@@ -287,9 +378,13 @@ def handle_kill_request(selected_proc: ProcessInfo, state: dict, current_pid: in
 
 def handle_renice_request(selected_proc: ProcessInfo, state: dict):
     """
-    Handle a renice request for the selected process.
-    Enters renice input mode.
+    Enter renice input mode for a process with validation.
+
+    Args:
+        selected_proc (ProcessInfo): Selected process.
+        state (dict): Process viewer state.
     """
+
     # Check if zombie
     if is_zombie_process(selected_proc):
         proc_name = get_process_display_name(selected_proc)
@@ -305,9 +400,19 @@ def handle_renice_request(selected_proc: ProcessInfo, state: dict):
 
 def _try_renice_process(pid: int, nice_value: int, state: dict) -> None:
     """
-    Attempt to renice a process with proper error handling.
-    Updates state with success or error messages.
+    Helper:
+    Attempt to change the nice value of a process and update viewer state.
+
+    Validates permissions, updates success or error messages in the state,
+    and applies the new nice value if allowed. Handles errors such as
+    permission denied or process not found.
+
+    Args:
+        pid (int): Process ID to renice.
+        nice_value (int): Target nice value (-20 to 19).
+        state (dict): Process viewer state, used for cached processes and messages.
     """
+
     try:
         current_nice = get_process_priority(pid)
 
@@ -344,8 +449,14 @@ def _try_renice_process(pid: int, nice_value: int, state: dict) -> None:
 
 def _cancel_renice_mode(state: dict) -> None:
     """
-    Cancel renice mode and reset related state.
-    Clears renice mode flag, target PID, and input buffer.
+    Helper:
+    Cancel the current renice input mode.
+
+    Resets the renice mode flag, target PID, and input buffer.
+    Marks the state as needing refresh so the UI updates.
+
+    Args:
+        state (dict): Process viewer state containing renice mode information.
     """
     state["renice_mode"] = False
     state["renice_pid"] = None
@@ -355,8 +466,14 @@ def _cancel_renice_mode(state: dict) -> None:
 
 def _confirm_renice(state: dict) -> None:
     """
-    Process renice confirmation when Enter is pressed.
-    Validates input, attempts to renice the process, and exits renice mode.
+    Helper:
+    Confirm and apply the renice input when Enter is pressed.
+
+    Validates that the input is numeric, attempts to renice the process,
+    and exits renice mode. Sets error messages for invalid or missing input.
+
+    Args:
+        state (dict): Process viewer state containing renice input and target PID.
     """
     if not state["renice_input"]:
         set_error_message(state, "No nice value entered")
@@ -373,8 +490,14 @@ def _confirm_renice(state: dict) -> None:
 
 def _handle_renice_backspace(state: dict) -> None:
     """
-    Handle backspace key in renice mode.
-    Removes the last character from the input buffer.
+    Helper:
+    Handle a backspace key press during renice input mode.
+
+    Removes the last character from the renice input buffer
+    and marks the state as needing refresh.
+
+    Args:
+        state (dict): Process viewer state containing renice input.
     """
     state["renice_input"] = state["renice_input"][:-1]
     state["needs_refresh"] = True
@@ -382,15 +505,20 @@ def _handle_renice_backspace(state: dict) -> None:
 
 def _is_valid_nice_input_char(char: str, current_input: str) -> bool:
     """
-    Check if a character is valid for nice value input.
+    Helper:
+    Check whether a character is valid for renice input.
 
-    Parameters:
-        char: The character to validate
-        current_input: The current input buffer
+    Only digits, plus/minus signs are allowed. Minus is only valid at the
+    start of the input.
+
+    Args:
+        char (str): Character to validate.
+        current_input (str): Current input string being built.
 
     Returns:
-        True if the character is valid, False otherwise
+        bool: True if the character is valid, False otherwise.
     """
+
     # Only allow minus at the start
     if char == "-" and len(current_input) > 0:
         return False
@@ -401,13 +529,17 @@ def _is_valid_nice_input_char(char: str, current_input: str) -> bool:
 
 def _handle_renice_character_input(key: int, state: dict) -> None:
     """
-    Handle character input for nice value.
-    Accepts numeric characters and minus sign with validation.
+    Helper:
+    Handle numeric or sign character input during renice mode.
+
+    Converts the key code to a character, validates it, and appends
+    it to the renice input buffer if valid and within length limits.
 
     Args:
-        key: The key code pressed
-        state: Current state dictionary
+        key (int): Key code pressed.
+        state (dict): Process viewer state containing renice input.
     """
+
     if key in (ord("-"), ord("+")) or (ord("0") <= key <= ord("9")):
         char = chr(key)
 
@@ -422,19 +554,19 @@ def _handle_renice_character_input(key: int, state: dict) -> None:
 
 def handle_renice_input(key: int, state: dict) -> None:
     """
-    Handle input during renice mode.
+    Handle all keyboard input during renice mode.
 
-    Processes keyboard input for entering nice values (-20 to 19).
-    Supports:
-    - ESC: Cancel renice mode
-    - Enter: Confirm and apply nice value
-    - Backspace: Delete last character
-    - Numeric input: Build nice value string
+    Processes:
+        - ESC: Cancel renice mode
+        - Enter: Confirm and apply nice value
+        - Backspace: Delete last character
+        - Numeric/sign input: Append to input buffer
 
     Args:
-        key: The key code from curses getch()
-        state: Current state dictionary containing renice mode data
+        key (int): Key code pressed.
+        state (dict): Process viewer state containing renice input and mode.
     """
+
     if key == KEY_ESCAPE:
         _cancel_renice_mode(state)
         return
@@ -453,8 +585,21 @@ def handle_renice_input(key: int, state: dict) -> None:
 
 def process_user_input(key: int, state: dict, current_pid: int) -> Optional[int]:
     """
-    Handle user input and update state.
-    Returns key if quitting/switching pages, else None.
+    Handle user input for the process viewer and update state accordingly.
+
+    Processes input based on current mode:
+        - Renice mode (highest priority)
+        - Kill confirmation mode
+        - Regular process actions (pause, resume, renice, kill)
+        - Navigation or quit keys
+
+    Args:
+        key (int): Key code from curses getch().
+        state (dict): Current process viewer state.
+        current_pid (int): Current process ID (used to prevent killing or pausing self).
+
+    Returns:
+        Optional[int]: Key code if quitting or switching pages, otherwise None.
     """
 
     processes = state["cached_processes"]
@@ -508,10 +653,15 @@ def process_user_input(key: int, state: dict, current_pid: int) -> Optional[int]
 
 def cleanup_and_exit(message: str = None):
     """
-    Properly cleanup terminal and exit.
-    Restores terminal to normal state, optionally prints a message,
-    and exits the process.
+    Restore the terminal to normal mode and exit the program.
+
+    Ends the curses session, resets the terminal, optionally prints a
+    message, and exits the process immediately.
+
+    Args:
+        message (str, optional): Optional message to display before exit.
     """
+
     try:
         curses.endwin()
     except curses.error:

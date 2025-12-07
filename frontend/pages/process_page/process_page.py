@@ -1,10 +1,34 @@
 """
 pages/process_page.py
 
-Main loop for interactive process manager UI.
+Main loop and UI management for the interactive curses-based process manager.
 
-Entry point that coordinates display, input, and state management
-for the curses-based process viewer.
+Shows:
+- Initialization of the process viewer state
+- Terminal size checks and window creation
+- Rendering of process table with sorting, scrolling, and selection
+- Handling of empty process lists
+- User input processing (navigation, resize, quit)
+- Redraw logic with timing intervals
+
+Integrates with:
+- process_page_constants for configuration and constants
+- process_display for rendering and drawing processes
+- process_state for managing viewer state, scrolling, and input actions
+- utils.ui_helpers for drawing content windows
+- utils.input_helpers for key input handling
+
+Dependencies:
+- curses
+- os
+- time
+- typing
+- dataclasses
+- frontend.utils.ui_helpers
+- frontend.utils.input_helpers
+- frontend.pages.process_page.process_page_constants
+- frontend.pages.process_page.process_display
+- frontend.pages.process_page.process_state
 """
 
 import curses
@@ -33,12 +57,27 @@ from frontend.pages.process_page.process_state import (
 )
 
 
+@dataclass
+class WindowConfig:
+    """Configuration for window management."""
+
+    nav_items: list
+    active_page: str
+    win: Optional[curses.window] = None
+    last_dimensions: Optional[Tuple[int, int]] = None
+
+
 def handle_window_resize(stdscr: curses.window) -> Tuple[Optional[int], Optional[int]]:
     """
     Handle terminal size and return dimensions, or None if too small.
-    Checks terminal dimensions and displays warning if window
-    is too small to display the process manager.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+
+    Returns:
+        Tuple[Optional[int], Optional[int]]: (height, width) or (None, None) if too small.
     """
+
     try:
         height, width = stdscr.getmaxyx()
     except curses.error:
@@ -56,26 +95,23 @@ def handle_window_resize(stdscr: curses.window) -> Tuple[Optional[int], Optional
     return height, width
 
 
-@dataclass
-class WindowConfig:
-    """Configuration for window management."""
-
-    nav_items: list
-    active_page: str
-    win: Optional[curses.window] = None
-    last_dimensions: Optional[Tuple[int, int]] = None
-
-
 def create_or_get_window(
     stdscr: curses.window,
     config: WindowConfig,
     current_dimensions: Tuple[int, int],
 ) -> Tuple[Optional[curses.window], Optional[Tuple[int, int]]]:
     """
-    Create or reuse content window based on dimension changes.
-    Creates a new content window only when dimensions change,
-    otherwise reuses existing window for efficiency.
+    Create or reuse a content window based on terminal dimensions.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+        config (WindowConfig): Window configuration object.
+        current_dimensions (Tuple[int, int]): Current terminal dimensions.
+
+    Returns:
+        Tuple[Optional[curses.window], Optional[Tuple[int, int]]]: Window and last dimensions.
     """
+
     if config.win is None or config.last_dimensions != current_dimensions:
         win = draw_content_window(
             stdscr, "Process Manager", config.nav_items, config.active_page
@@ -89,8 +125,14 @@ def create_or_get_window(
 def initialize_render_state(stdscr: curses.window) -> dict:
     """
     Initialize the rendering state for the main loop.
-    Sets up initial state including viewer state and timing variables.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+
+    Returns:
+        dict: Dictionary containing viewer state, current PID, and last draw time.
     """
+
     state = init_process_viewer(stdscr)
     current_pid = os.getpid()
 
@@ -104,9 +146,14 @@ def initialize_render_state(stdscr: curses.window) -> dict:
 def handle_empty_window(stdscr: curses.window) -> Optional[int]:
     """
     Handle case when content window creation fails.
-    Checks for global key input and returns appropriate key code,
-    or None if should continue loop.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+
+    Returns:
+        Optional[int]: Key code if a global key is pressed, else None.
     """
+
     key = handle_input(stdscr, GLOBAL_KEYS)
     if key != -1:
         return key
@@ -116,17 +163,28 @@ def handle_empty_window(stdscr: curses.window) -> Optional[int]:
 
 def should_redraw(now: float, last_draw_time: float, needs_refresh: bool) -> bool:
     """
-    Determine if screen should be redrawn.
-    Checks if enough time has passed or if a forced refresh is needed.
+    Determine if the screen should be redrawn.
+
+    Args:
+        now (float): Current timestamp.
+        last_draw_time (float): Timestamp of last redraw.
+        needs_refresh (bool): Flag indicating forced refresh.
+
+    Returns:
+        bool: True if redraw is needed.
     """
+
     return (now - last_draw_time) >= DRAW_INTERVAL or needs_refresh
 
 
 def handle_resize_key(window_config: WindowConfig):
     """
     Handle terminal resize event.
-    Resets window state to force recreation on next iteration.
+
+    Args:
+        window_config (WindowConfig): Current window configuration.
     """
+
     window_config.win = None
     window_config.last_dimensions = None
 
@@ -136,8 +194,17 @@ def process_input_key(
 ) -> Optional[int]:
     """
     Process user input and update state accordingly.
-    Handles resize events and user input, returns quit key if applicable.
+
+    Args:
+        key (int): Key code pressed.
+        viewer_state (dict): Viewer state dictionary.
+        current_pid (int): Current process ID.
+        window_config (WindowConfig): Window configuration.
+
+    Returns:
+        Optional[int]: Quit key code if user requested exit, else None.
     """
+
     if key == curses.KEY_RESIZE:
         handle_resize_key(window_config)
         viewer_state["needs_refresh"] = True
@@ -156,11 +223,18 @@ def _get_window(
     stdscr: curses.window, window_config: WindowConfig
 ) -> Optional[tuple[curses.window, tuple[int, int]]]:
     """
+    Helper:
     Handle terminal size and return a usable content window.
 
-    Returns a tuple of the window and its dimensions, or (None, None)
-    if the terminal is too small or the window cannot be created.
+    Args:
+        stdscr (curses.window): Main curses window.
+        window_config (WindowConfig): Window configuration object.
+
+    Returns:
+        Optional[tuple[curses.window, tuple[int, int]]]: Window and
+            dimensions, or (None, None) if unavailable.
     """
+
     dimensions = handle_window_resize(stdscr)
     if dimensions == (None, None):
         time.sleep(0.5)
@@ -174,17 +248,31 @@ def _get_window(
 
 def _refresh_process_data(viewer_state: dict) -> list:
     """
-    Refresh cached process data and return the list of processes.
+    Helper:
+    Refresh cached process data from viewer state.
+
+    Args:
+        viewer_state (dict): Viewer state containing cached processes.
+
+    Returns:
+        list: Updated list of ProcessInfo objects.
     """
+
     refresh_process_state(viewer_state)
     return viewer_state["cached_processes"]
 
 
 def _handle_empty_process_list(win: curses.window, processes: list) -> bool:
     """
-    Display empty process message if no processes exist.
+    Helper:
+    Display message if process list is empty.
 
-    Returns True if processes were empty and handled, else False.
+    Args:
+        win (curses.window): Content window.
+        processes (list): List of processes.
+
+    Returns:
+        bool: True if list is empty and handled, False otherwise.
     """
     if not processes:
         win_height, _ = win.getmaxyx()
@@ -198,8 +286,16 @@ def _draw_processes_if_needed(
     win: curses.window, render_state: dict, viewer_state: dict, processes: list
 ):
     """
-    Check if redraw is needed and render the process list.
+    Helper:
+    Check if redraw is needed and render processes.
+
+    Args:
+        win (curses.window): Content window.
+        render_state (dict): Rendering state.
+        viewer_state (dict): Viewer state.
+        processes (list): List of processes.
     """
+
     now = time.time()
     if should_redraw(
         now, render_state["last_draw_time"], viewer_state["needs_refresh"]
@@ -223,8 +319,19 @@ def _handle_input(
     window_config: WindowConfig,
 ) -> Optional[int]:
     """
+    Helper:
     Poll for user input and process it.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+        viewer_state (dict): Viewer state.
+        current_pid (int): Current process ID.
+        window_config (WindowConfig): Window configuration.
+
+    Returns:
+        Optional[int]: Quit key code if applicable, else None.
     """
+
     key = stdscr.getch()
     if key != -1:
         return process_input_key(key, viewer_state, current_pid, window_config)
@@ -237,10 +344,18 @@ def handle_main_loop_iteration(
     render_state: dict,
 ) -> Optional[int]:
     """
+    Helper:
     Execute one iteration of the main render loop for the process manager.
 
-    Handles window management, process display, scrolling, and user input.
+    Args:
+        stdscr (curses.window): Main curses window.
+        window_config (WindowConfig): Window configuration object.
+        render_state (dict): Rendering state dictionary.
+
+    Returns:
+        Optional[int]: Quit key code if user requested exit, else None.
     """
+
     viewer_state = render_state["viewer_state"]
 
     # Get window
@@ -278,17 +393,15 @@ def render_processes(
     """
     Interactive curses process viewer with sorting, scrolling, and process control.
 
-    Main entry point for the process manager page. Initializes the viewer,
-    runs the main loop, and handles user interaction.
-
     Args:
-        stdscr: Main curses window
-        nav_items: Navigation menu items
-        active_page: Currently active page identifier
+        stdscr (curses.window): Main curses window.
+        nav_items (list[tuple[str, str, str]]): Navigation menu items.
+        active_page (str): Currently active page identifier.
 
     Returns:
-        Key code for page navigation or quit
+        int: Key code for page navigation or quit.
     """
+
     render_state = initialize_render_state(stdscr)
     window_config = WindowConfig(nav_items=nav_items, active_page=active_page)
 
