@@ -4,11 +4,33 @@ A lightweight, multithreaded system monitoring application designed to retrieve,
 
 ---
 
-## Overview
+## Installation
 
-The System Monitoring Tool provides a high-performance backend for collecting and structuring process and system data. It integrates seamlessly with the frontend interface to deliver live updates, interactive controls, and a responsive monitoring experience.
+### **Prerequisites**
+- Python 3.10 or later
+- pip package manager
+- A Unix-based operating system (Linux recommended)
 
----
+### **Setup**
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-username/system-monitoring-tool.git
+   cd system-monitoring-tool
+   ```
+2. **Install dependencies**
+  Make sure you have requirements.txt in the project root, then run:
+  ```bash
+  pip install -r requirements.txt
+  ```
+4. **Run the application**
+  ```bash
+  python3 main.py
+  ```
+  Some features (e.g., lowering nice values) may require elevated privileges:
+  ```bash
+  sudo python3 main.py
+  ```
 
 ## Features
 
