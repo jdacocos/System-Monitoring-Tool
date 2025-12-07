@@ -20,7 +20,7 @@ from frontend.pages.process_page.process_page_constants import (
     SECTION_HEADER_ROW,
     FOOTER_OFFSET,
     FOOTER_TEXT,
-    FOOTER_CONFIRM_KILL_TEMPLATE, 
+    FOOTER_CONFIRM_KILL_TEMPLATE,
     VISIBLE_LINE_OFFSET,
     COLOR_ERROR,
     COLOR_FOOTER,
@@ -78,30 +78,33 @@ def _format_process_line(proc: ProcessInfo, width: int) -> str:
     command_width = max(10, width - 3 - fixed_width)  # 2 left padding + 1 right border
     command_display = (proc.command or "")[:command_width]
 
-    return PROCESS_ROW_TEMPLATE.format(
-    user=proc.user,
-    pid=proc.pid,
-    cpu=f"{proc.cpu_percent:.1f}",
-    mem=f"{proc.mem_percent:.1f}",
-    vsz=proc.vsz,
-    rss=proc.rss,
-    tty=tty_display,
-    stat=proc.stat,
-    nice=proc.nice,
-    start=proc.start,
-    time=proc.time,
-    user_w=COL_WIDTHS["user"],
-    pid_w=COL_WIDTHS["pid"],
-    cpu_w=COL_WIDTHS["cpu"],
-    mem_w=COL_WIDTHS["mem"],
-    vsz_w=COL_WIDTHS["vsz"],
-    rss_w=COL_WIDTHS["rss"],
-    tty_w=COL_WIDTHS["tty"],
-    stat_w=COL_WIDTHS["stat"],
-    nice_w=COL_WIDTHS["nice"],
-    start_w=COL_WIDTHS["start"],
-    time_w=COL_WIDTHS["time"],
-) + command_display
+    return (
+        PROCESS_ROW_TEMPLATE.format(
+            user=proc.user,
+            pid=proc.pid,
+            cpu=f"{proc.cpu_percent:.1f}",
+            mem=f"{proc.mem_percent:.1f}",
+            vsz=proc.vsz,
+            rss=proc.rss,
+            tty=tty_display,
+            stat=proc.stat,
+            nice=proc.nice,
+            start=proc.start,
+            time=proc.time,
+            user_w=COL_WIDTHS["user"],
+            pid_w=COL_WIDTHS["pid"],
+            cpu_w=COL_WIDTHS["cpu"],
+            mem_w=COL_WIDTHS["mem"],
+            vsz_w=COL_WIDTHS["vsz"],
+            rss_w=COL_WIDTHS["rss"],
+            tty_w=COL_WIDTHS["tty"],
+            stat_w=COL_WIDTHS["stat"],
+            nice_w=COL_WIDTHS["nice"],
+            start_w=COL_WIDTHS["start"],
+            time_w=COL_WIDTHS["time"],
+        )
+        + command_display
+    )
 
 
 def draw_process_row(
@@ -148,6 +151,7 @@ def _format_header() -> str:
         start_w=COL_WIDTHS["start"],
         time_w=COL_WIDTHS["time"],
     )
+
 
 def clear_content_area(win: curses.window, height: int):
     """
@@ -213,6 +217,7 @@ def draw_process_rows(
         if y < height - FOOTER_OFFSET:
             draw_process_row(win, y, proc, width, i == draw_params.selected_index)
 
+
 def draw_footer(win: curses.window, height: int, display_state: DisplayState) -> None:
     """Draw the footer with logical sectors: navigation, sort, actions."""
     try:
@@ -230,11 +235,15 @@ def draw_footer(win: curses.window, height: int, display_state: DisplayState) ->
             win.attroff(curses.color_pair(COLOR_ERROR))
         elif display_state.error_message:
             win.attron(curses.color_pair(COLOR_ERROR))
-            win.addnstr(height - FOOTER_OFFSET, 2, display_state.error_message, footer_width)
+            win.addnstr(
+                height - FOOTER_OFFSET, 2, display_state.error_message, footer_width
+            )
             win.attroff(curses.color_pair(COLOR_ERROR))
         elif display_state.success_message:
             win.attron(curses.color_pair(COLOR_FOOTER))
-            win.addnstr(height - FOOTER_OFFSET, 2, display_state.success_message, footer_width)
+            win.addnstr(
+                height - FOOTER_OFFSET, 2, display_state.success_message, footer_width
+            )
             win.attroff(curses.color_pair(COLOR_FOOTER))
         else:
             win.attron(curses.color_pair(COLOR_FOOTER))
@@ -251,6 +260,7 @@ def draw_footer(win: curses.window, height: int, display_state: DisplayState) ->
 
     except curses.error:
         pass
+
 
 def draw_process_list(
     win: curses.window, draw_params: DrawParams, display_state: DisplayState

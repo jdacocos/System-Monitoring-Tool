@@ -41,6 +41,27 @@ SORT_KEYS = {
     "nice": "nice",
 }
 
+# Key mappings for sorting
+SORT_KEY_MAPPING = {
+    ord("c"): "cpu",
+    ord("C"): "cpu",
+    ord("m"): "mem",
+    ord("M"): "mem",
+    ord("p"): "pid",
+    ord("P"): "pid",
+    ord("n"): "name",
+    ord("N"): "name",
+    ord("i"): "nice",
+    ord("I"): "nice",
+}
+
+# Keys for actions
+ACTION_KEYS = {
+    "kill": (ord("k"), ord("K")),
+    "pause": (ord("s"), ord("S")),
+    "resume": (ord("r"), ord("R")),
+}
+
 # Header text constants
 PROCESS_HEADER_TEMPLATE = (
     "{user:<{user_w}} "
@@ -71,7 +92,9 @@ PROCESS_ROW_TEMPLATE = (
     "{time:<{time_w}} "
 )
 # Footer text constants
-FOOTER_NAVIGATION = "[Navigation] [↑/↓] by 1  [PgUp/PgDn] by 10  [Home/End] to Start/End"
+FOOTER_NAVIGATION = (
+    "[Navigation] [↑/↓] by 1  [PgUp/PgDn] by 10  [Home/End] to Start/End"
+)
 FOOTER_SORT = "[Sort] [C] CPU  [M] MEM  [P] PID  [N] Name  [I] Nice"
 FOOTER_ACTIONS = "[Actions] [S] Stop  [R] Resume  [K] Kill  [Q] Quit"
 FOOTER_TEXT = f"{FOOTER_NAVIGATION}    {FOOTER_SORT}    {FOOTER_ACTIONS}"
