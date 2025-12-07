@@ -83,6 +83,7 @@ def _format_process_line(proc: ProcessInfo, width: int) -> str:
         f"{proc.rss:>{COL_WIDTHS['rss']}} "
         f"{tty_display:<{COL_WIDTHS['tty']}} "
         f"{proc.stat:<{COL_WIDTHS['stat']}} "
+        f"{proc.nice:>{COL_WIDTHS['nice']}} "
         f"{proc.start:<{COL_WIDTHS['start']}} "
         f"{proc.time:<{COL_WIDTHS['time']}} "
         f"{command_display}"
@@ -112,13 +113,21 @@ def _format_header() -> str:
     Format the process list header.
     Creates column headers with proper spacing and alignment.
     """
+    
     header_fmt = (
-        f"{{user:<{COL_WIDTHS['user']}}} {{pid:<{COL_WIDTHS['pid']}}} "
-        f"{{cpu:>{COL_WIDTHS['cpu']}}} {{mem:>{COL_WIDTHS['mem']}}} "
-        f"{{vsz:>{COL_WIDTHS['vsz']}}} {{rss:>{COL_WIDTHS['rss']}}} "
-        f"{{tty:<{COL_WIDTHS['tty']}}} {{stat:<{COL_WIDTHS['stat']}}} "
-        f"{{start:<{COL_WIDTHS['start']}}} {{time:<{COL_WIDTHS['time']}}} COMMAND"
+        f"{{user:<{COL_WIDTHS['user']}}} "
+        f"{{pid:<{COL_WIDTHS['pid']}}} "
+        f"{{cpu:>{COL_WIDTHS['cpu']}}} "
+        f"{{mem:>{COL_WIDTHS['mem']}}} "
+        f"{{vsz:>{COL_WIDTHS['vsz']}}} "
+        f"{{rss:>{COL_WIDTHS['rss']}}} "
+        f"{{tty:<{COL_WIDTHS['tty']}}} "
+        f"{{stat:<{COL_WIDTHS['stat']}}} "
+        f"{{nice:>{COL_WIDTHS['nice']}}} "
+        f"{{start:<{COL_WIDTHS['start']}}} "
+        f"{{time:<{COL_WIDTHS['time']}}} COMMAND"
     )
+    
     return header_fmt.format(
         user="USER",
         pid="PID",
@@ -128,6 +137,7 @@ def _format_header() -> str:
         rss="RSS",
         tty="TTY",
         stat="STAT",
+        nice="NI", 
         start="START",
         time="TIME",
     )
@@ -230,7 +240,8 @@ def draw_footer(win: curses.window, height: int, display_state: DisplayState) ->
         else:
             footer_text = (
                 "[↑↓/PgUp/PgDn/Home/End] Navigate  "
-                "[C]PU  [M]em  [P]ID  [N]ame  [S]top  [R]esume  [K]ill  [Q]uit"
+                "[C]PU  [M]em  [P]ID  [N]ame  [I]Nice  "
+                "[S]top  [R]esume  [K]ill  [Q]uit"
             )
             win.attron(curses.color_pair(COLOR_FOOTER))
             win.addnstr(height - FOOTER_OFFSET, 2, footer_text, footer_width)

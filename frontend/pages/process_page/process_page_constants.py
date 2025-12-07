@@ -26,6 +26,7 @@ COL_WIDTHS = {
     "rss": 10,
     "tty": 8,
     "stat": 6,
+    "nice": 5,
     "start": 8,
     "time": 10,
     "command": 0,  # dynamic width
@@ -37,6 +38,7 @@ SORT_KEYS = {
     "mem": "mem_percent",
     "pid": "pid",
     "name": "command",
+    "nice": "nice",
 }
 
 # Critical processes that require confirmation before killing

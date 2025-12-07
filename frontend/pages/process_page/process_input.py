@@ -51,6 +51,8 @@ def handle_sort_keys(key: int) -> Optional[str]:
         mode = "pid"
     if key in (ord("n"), ord("N")):
         mode = "name"
+    if key in (ord("i"), ord("I")):
+        mode = "nice"
     return mode
 
 
