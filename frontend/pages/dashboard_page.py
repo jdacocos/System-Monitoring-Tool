@@ -5,13 +5,11 @@ import time
 import psutil
 
 from frontend.utils.ui_helpers import (
-    init_colors,
-    draw_content_window,
     draw_bar,
     draw_section_header,
     format_bytes,
 )
-from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
+from frontend.utils.page_helpers import run_page_loop
 
 
 def get_system_stats() -> dict:
@@ -105,39 +103,14 @@ def render_system_summary(win: curses.window, stats: dict, start_y: int) -> None
 def render_dashboard(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
-    """Render the main dashboard with high level system statistics."""
-
-    init_colors()
-    curses.curs_set(0)
-    stdscr.nodelay(True)
-
-    while True:
-        content_win = draw_content_window(
-            stdscr,
-            title="System Dashboard",
-            nav_items=nav_items,
-            active_page=active_page,
-        )
-
-        if content_win is None:
-            key = handle_input(stdscr, GLOBAL_KEYS)
-            if key != -1:
-                return key
-            time.sleep(0.2)
-            continue
-
-        stats = get_system_stats()
-
-        next_y = render_resource_bars(content_win, stats, start_y=1)
-        next_y = render_network_info(content_win, stats["net"], start_y=next_y)
-        render_system_summary(content_win, stats, start_y=next_y)
-
-        content_win.noutrefresh()
-        stdscr.noutrefresh()
-        curses.doupdate()
-
-        key = handle_input(stdscr, GLOBAL_KEYS)
-        if key != -1:
-            return key
-
-        time.sleep(0.3)
+    """
+    Launch the System Dashboard page loop using the generic `run_page_loop`.
+    """
+    return run_page_loop(
+        stdscr,
+        title="System Dashboard",
+        nav_items=nav_items,
+        active_page=active_page,
+        render_content_fn=render_dashboard_page,
+        sleep_time=0.3,
+    )

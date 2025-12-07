@@ -4,14 +4,12 @@ import psutil
 import time
 
 from frontend.utils.ui_helpers import (
-    init_colors,
-    draw_content_window,
     draw_section_header,
     draw_bar,
     format_bytes,
     draw_sparkline,
 )
-from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
+from frontend.utils.page_helpers import run_page_loop
 
 READ_HISTORY: deque[float] = deque(maxlen=120)
 WRITE_HISTORY: deque[float] = deque(maxlen=120)
@@ -128,46 +126,99 @@ def render_disk_io(
     )
 
 
+def render_disk_page(content_win: curses.window) -> None:
+    """
+    Render Disk & I/O Monitor page content.
+    """
+    # Gather disk usage and I/O stats
+    previous_io = getattr(render_disk_page, "_prev_io", None)
+    previous_time = getattr(render_disk_page, "_prev_time", time.time())
+    if previous_io is None:
+        previous_io = psutil.disk_io_counters()
+        render_disk_page._prev_io = previous_io
+
+    current_io = psutil.disk_io_counters()
+    current_time = time.time()
+    elapsed = max(current_time - previous_time, 1e-6)
+
+    read_speed = (current_io.read_bytes - previous_io.read_bytes) / (1024**2) / elapsed
+    write_speed = (
+        (current_io.write_bytes - previous_io.write_bytes) / (1024**2) / elapsed
+    )
+
+    partitions = []
+    for p in psutil.disk_partitions():
+        try:
+            usage = psutil.disk_usage(p.mountpoint)
+        except (PermissionError, FileNotFoundError, OSError):
+            continue
+        partitions.append(
+            {
+                "device": p.device,
+                "mountpoint": p.mountpoint,
+                "fstype": p.fstype,
+                "usage": usage,
+            }
+        )
+    partitions.sort(key=lambda d: d["usage"].percent, reverse=True)
+
+    # Store for next call
+    render_disk_page._prev_io = current_io
+    render_disk_page._prev_time = current_time
+
+    READ_HISTORY.append(max(0.0, read_speed))
+    WRITE_HISTORY.append(max(0.0, write_speed))
+
+    # Draw disk usage
+    y = 1
+    draw_section_header(content_win, y, "Disk Usage")
+    y += 1
+    for part in partitions[:4]:
+        draw_bar(content_win, y, 2, part["device"][-12:], part["usage"].percent)
+        content_win.addstr(
+            y + 1,
+            4,
+            f"{part['mountpoint']} ({part['fstype']}) {format_bytes(part['usage'].used)} / {format_bytes(part['usage'].total)}",
+        )
+        y += 3
+
+    # Draw I/O speeds
+    draw_section_header(content_win, y, "I/O Activity")
+    y += 1
+    content_win.addstr(y, 2, f"Read  : {read_speed:6.2f} MB/s")
+    content_win.addstr(y + 1, 2, f"Write : {write_speed:6.2f} MB/s")
+    y += 3
+    draw_sparkline(
+        content_win,
+        y,
+        2,
+        list(READ_HISTORY),
+        width=content_win.getmaxyx()[1] - 6,
+        label="Read",
+        unit=" MB/s",
+    )
+    draw_sparkline(
+        content_win,
+        y + 1,
+        2,
+        list(WRITE_HISTORY),
+        width=content_win.getmaxyx()[1] - 6,
+        label="Write",
+        unit=" MB/s",
+    )
+
+
 def render_disk(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
-    """Render the disk usage and I/O monitoring page."""
-
-    init_colors()
-    curses.curs_set(0)
-    stdscr.nodelay(True)
-
-    previous_io = psutil.disk_io_counters()
-    previous_time = time.time()
-
-    while True:
-        content_win = draw_content_window(
-            stdscr,
-            title="Disk & I/O Monitor",
-            nav_items=nav_items,
-            active_page=active_page,
-        )
-
-        if content_win is None:
-            key = handle_input(stdscr, GLOBAL_KEYS)
-            if key != -1:
-                return key
-            time.sleep(0.2)
-            continue
-
-        stats, previous_io, previous_time = get_disk_stats(previous_io, previous_time)
-        READ_HISTORY.append(stats["read_speed"])
-        WRITE_HISTORY.append(stats["write_speed"])
-
-        next_y = render_disk_usage(content_win, stats["partitions"], start_y=1)
-        render_disk_io(content_win, stats, READ_HISTORY, WRITE_HISTORY, start_y=next_y)
-
-        content_win.noutrefresh()
-        stdscr.noutrefresh()
-        curses.doupdate()
-
-        key = handle_input(stdscr, GLOBAL_KEYS)
-        if key != -1:
-            return key
-
-        time.sleep(0.3)
+    """
+    Launch the Disk Monitor page loop using the generic `run_page_loop`.
+    """
+    return run_page_loop(
+        stdscr,
+        title="Disk & I/O Monitor",
+        nav_items=nav_items,
+        active_page=active_page,
+        render_content_fn=render_disk_page,
+        sleep_time=0.3,
+    )

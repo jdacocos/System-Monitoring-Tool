@@ -1,21 +1,21 @@
 import curses
 from collections import deque
-import time
 
 from frontend.utils.ui_helpers import (
-    init_colors,
-    draw_content_window,
     draw_bar,
     draw_section_header,
     draw_sparkline,
 )
-from frontend.utils.input_helpers import handle_input, GLOBAL_KEYS
+from frontend.utils.page_helpers import run_page_loop
 from backend.cpu_info import (
     get_cpu_percent_per_core,
     get_cpu_freq,
     get_logical_cpu_count,
     get_physical_cpu_count,
 )
+
+# Maintain history of overall CPU usage for trend sparklines
+CPU_HISTORY: deque[float] = deque(maxlen=120)
 
 
 def get_cpu_stats() -> dict:
@@ -31,9 +31,6 @@ def get_cpu_stats() -> dict:
         "logical": get_logical_cpu_count(),
         "physical": get_physical_cpu_count(),
     }
-
-
-CPU_HISTORY: deque[float] = deque(maxlen=120)
 
 
 def render_overall_cpu(win: curses.window, stats: dict, history: deque[float]) -> int:
@@ -98,38 +95,35 @@ def render_per_core_usage(
         draw_bar(win, y, x, label, value, width=bar_width)
 
 
+def render_cpu_page(content_win: curses.window) -> None:
+    """
+    Render the CPU monitoring page content inside the given content window.
+    """
+    stats = get_cpu_stats()
+    CPU_HISTORY.append(stats["overall"])
+
+    # Render overall CPU usage and frequency
+    next_y = render_overall_cpu(content_win, stats, CPU_HISTORY)
+
+    # Render per-core usage bars starting below the overall stats
+    render_per_core_usage(content_win, stats["per_core"], start_y=next_y)
+
+
 def render_cpu(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
-    """Render the CPU monitor page."""
+    """
+    Launch the CPU Monitor page loop.
 
-    init_colors()
-    curses.curs_set(0)
-    stdscr.nodelay(True)
-
-    while True:
-        content_win = draw_content_window(
-            stdscr, title="CPU Monitor", nav_items=nav_items, active_page=active_page
-        )
-
-        if content_win is None:
-            key = handle_input(stdscr, GLOBAL_KEYS)
-            if key != -1:
-                return key
-            time.sleep(0.2)
-            continue
-
-        stats = get_cpu_stats()
-        CPU_HISTORY.append(stats["overall"])
-        next_y = render_overall_cpu(content_win, stats, CPU_HISTORY)
-        render_per_core_usage(content_win, stats["per_core"], start_y=next_y)
-
-        content_win.noutrefresh()
-        stdscr.noutrefresh()
-        curses.doupdate()
-
-        key = handle_input(stdscr, GLOBAL_KEYS)
-        if key != -1:
-            return key
-
-        time.sleep(0.3)
+    This function delegates all curses setup, window drawing, input handling,
+    and refresh logic to the generic `run_page_loop`, passing the page-specific
+    rendering function.
+    """
+    return run_page_loop(
+        stdscr,
+        title="CPU Monitor",
+        nav_items=nav_items,
+        active_page=active_page,
+        render_content_fn=render_cpu_page,
+        sleep_time=0.3,
+    )
