@@ -4,17 +4,12 @@ import platform
 import time
 import psutil
 
-from frontend.utils.ui_helpers import (
-    draw_bar,
-    draw_section_header,
-    format_bytes,
-)
 from frontend.utils.page_helpers import run_page_loop
+from frontend.utils.ui_helpers import draw_bar, draw_section_header, format_bytes
 
 
 def get_system_stats() -> dict:
     """Fetch CPU, memory, disk, network, and general system statistics."""
-
     try:
         load_avg = os.getloadavg()
     except (AttributeError, OSError):
@@ -35,7 +30,6 @@ def get_system_stats() -> dict:
 
 def format_duration(seconds: float) -> str:
     """Return a concise uptime string."""
-
     seconds = int(seconds)
     days, seconds = divmod(seconds, 86400)
     hours, seconds = divmod(seconds, 3600)
@@ -45,9 +39,27 @@ def format_duration(seconds: float) -> str:
     return f"{hours:02d}h {minutes:02d}m"
 
 
+def render_dashboard_page(content_win: curses.window) -> None:
+    """
+    Render the system dashboard page content inside the given window.
+
+    Displays:
+        - Resource utilization bars for CPU, memory, and disk.
+        - Network activity summary.
+        - System summary information.
+    """
+    stats = get_system_stats()
+
+    # Resource bars
+    next_y = render_resource_bars(content_win, stats, start_y=1)
+    # Network info
+    next_y = render_network_info(content_win, stats["net"], start_y=next_y)
+    # System summary
+    render_system_summary(content_win, stats, start_y=next_y)
+
+
 def render_resource_bars(win: curses.window, stats: dict, start_y: int) -> int:
     """Render the CPU, memory, and disk usage bars."""
-
     draw_section_header(win, start_y, "Resource Utilization")
     y = start_y + 1
 
@@ -69,7 +81,6 @@ def render_resource_bars(win: curses.window, stats: dict, start_y: int) -> int:
 
 def render_network_info(win: curses.window, net, start_y: int) -> int:
     """Display total network usage in MB."""
-
     draw_section_header(win, start_y, "Network Activity")
 
     sent_mb = net.bytes_sent / (1024**2)
@@ -82,7 +93,6 @@ def render_network_info(win: curses.window, net, start_y: int) -> int:
 
 def render_system_summary(win: curses.window, stats: dict, start_y: int) -> None:
     """Render host summary information safely within window bounds."""
-
     draw_section_header(win, start_y, "System Summary")
 
     height, width = win.getmaxyx()
@@ -105,6 +115,14 @@ def render_dashboard(
 ) -> int:
     """
     Launch the System Dashboard page loop using the generic `run_page_loop`.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+        nav_items (list[tuple[str, str, str]]): Navigation menu items.
+        active_page (str): Currently active page identifier.
+
+    Returns:
+        int: The key code of a quit/navigation key if pressed.
     """
     return run_page_loop(
         stdscr,
