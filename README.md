@@ -1,21 +1,65 @@
-# System Monitoring Tool — Process Integration Branch
+# System Monitoring Tool
 
-**Branch:** `process-integration`
+A lightweight, multithreaded system monitoring application designed to retrieve, process, and display real-time system information with smooth UI integration and responsive process control.
+
+---
 
 ## Overview
-The `process-integration` branch focuses on the process management and integration layer of the system monitoring tool. It provides the core functionality for retrieving, processing, and displaying system process data.
 
-## Responsibilities
-This branch is responsible for:
+The System Monitoring Tool provides a high-performance backend for collecting and structuring process and system data. It integrates seamlessly with the frontend interface to deliver live updates, interactive controls, and a responsive monitoring experience.
 
-- Retrieving and structuring process information from the system.
-- Managing concurrency and live updates using multithreading.
-- Integrating backend process data modules with the frontend UI.
-- Handling signal-based process control for responsive and safe monitoring.
+---
+
+## Features
+
+- **Real-time process retrieval** — Efficiently gathers live process information directly from the operating system.
+- **Structured data pipeline** — Normalizes and formats raw system data for consistent UI consumption.
+- **Multithreaded update engine** — Ensures smooth, non-blocking live updates using lightweight concurrency.
+- **CPU monitoring** — Displays live CPU usage across all available cores.
+- **Memory monitoring** — Tracks system memory usage, swap activity, and overall resource consumption.
+- **Process page** — Provides detailed per-process information such as PID, CPU usage, memory usage, state, and TTY.
+- **Signal-based process control** — Supports responsive and safe signaling mechanisms such as `SIGTERM` and `SIGKILL`.
+- **Process termination (kill)** — Users can terminate running processes directly from the UI.
+- **Adjust process priority (nice value)**  
+  - Users can increase a process’s nice value (lower priority) without elevated privileges.  
+  - Lowering the nice value (raising priority) requires elevated permissions (`sudo`).  
+  - Non-root users are restricted by Linux to raising the nice value only and typically only once.
+- **Backend–Frontend integration layer** — Bridges system-level data with the application interface for seamless interaction.
+
+---
+
+## Working Features
+
+The following sections of the tool are fully implemented and functional:
+
+- **CPU Page** — Real-time CPU load visualization.  
+- **Memory Page** — Accurate system memory and swap tracking.  
+- **Process Page** — Full process listing, live updates, process control, and priority adjustment.
+
+These components form the current stable core of the system.
+
+---
+
+## Stretch Goals
+
+Future enhancements planned for full-feature completion include:
+
+- **Dashboard (Full Low-Level Reimplementation)**  
+  Rebuild the dashboard using direct system calls and the Python `os` module for maximum accuracy and minimal overhead.
+- **Disk Monitoring**  
+  Track disk I/O usage, device throughput, read/write statistics, and filesystem usage.
+- **Network Monitoring**  
+  Monitor network interfaces, bandwidth, packet statistics, and connection states.
+
+These goals will be integrated once the core functionality has matured.
+
+---
 
 ## Purpose
-The `process-integration` branch serves as the backbone for process-related functionality, enabling the tool to:
 
-- Display real-time system information.
-- Monitor and manage processes efficiently.
-- Provide a robust foundation for further frontend and backend development.
+The System Monitoring Tool's backend establishes a reliable foundation for:
+
+- Accurate and immediate system insight.
+- Efficient process management operations.
+- Interactive and responsive user experiences.
+- Future expansion of functionality across the entire application.
