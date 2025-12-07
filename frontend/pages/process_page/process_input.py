@@ -59,9 +59,10 @@ def is_quit_or_nav_key(key: int) -> bool:
 
 def handle_process_input(
     key: int, selected_index: int, processes: List[ProcessInfo]
-) -> Tuple[int, Optional[str], bool, bool, bool, Optional[int]]:
+) -> Tuple[int, Optional[str], bool, bool, bool, bool, Optional[int]]:
     """
     Handle all key input for navigation, sorting, actions, and quitting.
+    Returns: (new_index, sort_mode, kill_flag, pause_flag, resume_flag, renice_flag, return_key)
     """
     new_selected = handle_navigation_keys(key, selected_index, len(processes))
     new_sort_mode = handle_sort_keys(key)
@@ -70,7 +71,16 @@ def handle_process_input(
     kill_flag = key in ACTION_KEYS["kill"]
     pause_flag = key in ACTION_KEYS["pause"]
     resume_flag = key in ACTION_KEYS["resume"]
+    renice_flag = key in ACTION_KEYS.get("renice", [ord("r"), ord("R")])
 
     return_key = key if is_quit_or_nav_key(key) else None
 
-    return new_selected, new_sort_mode, kill_flag, pause_flag, resume_flag, return_key
+    return (
+        new_selected,
+        new_sort_mode,
+        kill_flag,
+        pause_flag,
+        resume_flag,
+        renice_flag,
+        return_key,
+    )

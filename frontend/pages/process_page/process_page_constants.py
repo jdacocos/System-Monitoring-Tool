@@ -49,8 +49,8 @@ SORT_KEY_MAPPING = {
     ord("M"): "mem",
     ord("p"): "pid",
     ord("P"): "pid",
-    ord("n"): "name",
-    ord("N"): "name",
+    ord("a"): "name",
+    ord("A"): "name",
     ord("i"): "nice",
     ord("I"): "nice",
 }
@@ -60,6 +60,7 @@ ACTION_KEYS = {
     "kill": (ord("k"), ord("K")),
     "pause": (ord("s"), ord("S")),
     "resume": (ord("r"), ord("R")),
+    "renice": (ord("n"), ord("N")),
 }
 
 # Header text constants
@@ -95,8 +96,8 @@ PROCESS_ROW_TEMPLATE = (
 FOOTER_NAVIGATION = (
     "[Navigation] [↑/↓] by 1  [PgUp/PgDn] by 10  [Home/End] to Start/End"
 )
-FOOTER_SORT = "[Sort] [C] CPU  [M] MEM  [P] PID  [N] Name  [I] Nice"
-FOOTER_ACTIONS = "[Actions] [S] Stop  [R] Resume  [K] Kill  [Q] Quit"
+FOOTER_SORT = "[Sort] [C] CPU  [M] MEM  [P] PID  [A] Name  [I] Nice"
+FOOTER_ACTIONS = "[Actions] [S] Stop  [R] Resume  [K] Kill  [N] Renice  [Q] Quit"
 FOOTER_TEXT = f"{FOOTER_NAVIGATION}    {FOOTER_SORT}    {FOOTER_ACTIONS}"
 
 # Kill confirmation template
@@ -121,6 +122,14 @@ CRITICAL_PROCESSES = {
     "kde-session",
     "xfce4-session",  # Desktop sessions
 }
+
+# Input key constants
+KEY_ESCAPE = 27  # ESC key
+KEY_ENTER = 10  # Enter/Return key
+KEY_BACKSPACE = 263  # curses.KEY_BACKSPACE value
+KEY_BACKSPACE_ALT1 = 127  # Alternative backspace (DEL)
+KEY_BACKSPACE_ALT2 = 8  # Alternative backspace (Ctrl+H)
+MAX_NICE_INPUT_LENGTH = 3  # Maximum characters for nice value input (-20 to 19)
 
 # Timing intervals (in seconds)
 REFRESH_INTERVAL = 2.0  # Seconds between process data updates

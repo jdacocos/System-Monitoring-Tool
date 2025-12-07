@@ -40,6 +40,9 @@ class DisplayState:
     success_message: str = None
     confirm_kill: bool = False
     process_name: str = None
+    renice_mode: bool = False
+    renice_pid: int = None
+    renice_input: str = ""
 
 
 @dataclass
@@ -218,48 +221,175 @@ def draw_process_rows(
             draw_process_row(win, y, proc, width, i == draw_params.selected_index)
 
 
-def draw_footer(win: curses.window, height: int, display_state: DisplayState) -> None:
-    """Draw the footer with logical sectors: navigation, sort, actions."""
+def _draw_footer_border(win: curses.window, height: int) -> None:
+    """
+    Draw the right border of the footer line.
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+    """
     try:
-        # Clear the footer line first
-        win.move(height - FOOTER_OFFSET, 2)
-        win.clrtoeol()
-        footer_width = win.getmaxyx()[1] - 3  # leave right border
-
-        if display_state.confirm_kill and display_state.process_name:
-            win.attron(curses.color_pair(COLOR_ERROR))
-            confirm_text = FOOTER_CONFIRM_KILL_TEMPLATE.format(
-                process_name=display_state.process_name
-            )
-            win.addnstr(height - FOOTER_OFFSET, 2, confirm_text, footer_width)
-            win.attroff(curses.color_pair(COLOR_ERROR))
-        elif display_state.error_message:
-            win.attron(curses.color_pair(COLOR_ERROR))
-            win.addnstr(
-                height - FOOTER_OFFSET, 2, display_state.error_message, footer_width
-            )
-            win.attroff(curses.color_pair(COLOR_ERROR))
-        elif display_state.success_message:
-            win.attron(curses.color_pair(COLOR_FOOTER))
-            win.addnstr(
-                height - FOOTER_OFFSET, 2, display_state.success_message, footer_width
-            )
-            win.attroff(curses.color_pair(COLOR_FOOTER))
-        else:
-            win.attron(curses.color_pair(COLOR_FOOTER))
-            win.addnstr(height - FOOTER_OFFSET, 2, FOOTER_TEXT, footer_width)
-            win.attroff(curses.color_pair(COLOR_FOOTER))
-
-        # Draw right border
         win.addch(
             height - FOOTER_OFFSET,
             win.getmaxyx()[1] - 1,
             "│",
             curses.color_pair(COLOR_NORMAL),
         )
-
     except curses.error:
         pass
+
+
+def _clear_footer_line(win: curses.window, height: int) -> None:
+    """
+    Clear the footer line in preparation for new content.
+
+    Parameters:
+        win: The curses window to clear
+        height: Window height for calculating footer position
+    """
+    try:
+        win.move(height - FOOTER_OFFSET, 2)
+        win.clrtoeol()
+    except curses.error:
+        pass
+
+
+def _draw_renice_prompt(
+    win: curses.window, height: int, footer_width: int, display_state: DisplayState
+) -> None:
+    """
+    Draw the renice input prompt in the footer.
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+        footer_width: Maximum width for footer text
+        display_state: Current display state containing renice information
+    """
+    try:
+        win.attron(curses.color_pair(COLOR_FOOTER))
+        prompt = (
+            f"Enter nice value for PID {display_state.renice_pid} "
+            f"(-20 to 19): {display_state.renice_input}"
+        )
+        win.addnstr(height - FOOTER_OFFSET, 2, prompt, footer_width)
+        win.attroff(curses.color_pair(COLOR_FOOTER))
+    except curses.error:
+        pass
+
+
+def _draw_kill_confirmation(
+    win: curses.window, height: int, footer_width: int, display_state: DisplayState
+) -> None:
+    """
+    Draw the kill confirmation prompt in the footer.
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+        footer_width: Maximum width for footer text
+        display_state: Current display state containing process name
+    """
+    try:
+        win.attron(curses.color_pair(COLOR_ERROR))
+        confirm_text = FOOTER_CONFIRM_KILL_TEMPLATE.format(
+            process_name=display_state.process_name
+        )
+        win.addnstr(height - FOOTER_OFFSET, 2, confirm_text, footer_width)
+        win.attroff(curses.color_pair(COLOR_ERROR))
+    except curses.error:
+        pass
+
+
+def _draw_error_message(
+    win: curses.window, height: int, footer_width: int, message: str
+) -> None:
+    """
+    Draw an error message in the footer.
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+        footer_width: Maximum width for footer text
+        message: The error message to display
+    """
+    try:
+        win.attron(curses.color_pair(COLOR_ERROR))
+        win.addnstr(height - FOOTER_OFFSET, 2, message, footer_width)
+        win.attroff(curses.color_pair(COLOR_ERROR))
+    except curses.error:
+        pass
+
+
+def _draw_success_message(
+    win: curses.window, height: int, footer_width: int, message: str
+) -> None:
+    """
+    Draw a success message in the footer.
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+        footer_width: Maximum width for footer text
+        message: The success message to display
+    """
+    try:
+        win.attron(curses.color_pair(COLOR_FOOTER))
+        win.addnstr(height - FOOTER_OFFSET, 2, message, footer_width)
+        win.attroff(curses.color_pair(COLOR_FOOTER))
+    except curses.error:
+        pass
+
+
+def _draw_default_footer(win: curses.window, height: int, footer_width: int) -> None:
+    """
+    Draw the default footer with navigation, sort, and action help text.
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+        footer_width: Maximum width for footer text
+    """
+    try:
+        win.attron(curses.color_pair(COLOR_FOOTER))
+        win.addnstr(height - FOOTER_OFFSET, 2, FOOTER_TEXT, footer_width)
+        win.attroff(curses.color_pair(COLOR_FOOTER))
+    except curses.error:
+        pass
+
+
+def draw_footer(win: curses.window, height: int, display_state: DisplayState) -> None:
+    """
+    Draw the footer with context-appropriate content.
+
+    Displays different footer content based on current state:
+    - Renice input prompt when in renice mode
+    - Kill confirmation when confirming kill
+    - Error messages when errors occur
+    - Success messages after successful operations
+    - Default help text otherwise
+
+    Parameters:
+        win: The curses window to draw in
+        height: Window height for calculating footer position
+        display_state: Current display state determining footer content
+    """
+    _clear_footer_line(win, height)
+    footer_width = win.getmaxyx()[1] - 3  # leave right border
+
+    if display_state.renice_mode and display_state.renice_pid:
+        _draw_renice_prompt(win, height, footer_width, display_state)
+    elif display_state.confirm_kill and display_state.process_name:
+        _draw_kill_confirmation(win, height, footer_width, display_state)
+    elif display_state.error_message:
+        _draw_error_message(win, height, footer_width, display_state.error_message)
+    elif display_state.success_message:
+        _draw_success_message(win, height, footer_width, display_state.success_message)
+    else:
+        _draw_default_footer(win, height, footer_width)
+
+    _draw_footer_border(win, height)
 
 
 def draw_process_list(

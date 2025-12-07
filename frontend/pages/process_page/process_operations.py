@@ -196,6 +196,23 @@ def is_process_stopped(proc: ProcessInfo) -> bool:
     return stat.startswith("T") if stat else False
 
 
+def is_zombie_process(proc: ProcessInfo) -> bool:
+    """
+    Check if a process is a zombie (already terminated).
+
+    Zombie processes cannot be killed, paused, resumed, or reniced
+    because they are already dead and just waiting to be reaped.
+
+    Parameters:
+        proc: ProcessInfo object
+
+    Returns:
+        True if process is zombie, False otherwise
+    """
+    stat = proc.stat or ""
+    return stat.startswith("Z") if stat else False
+
+
 def can_modify_process(pid: int, current_user_pid: int) -> tuple[bool, Optional[str]]:
     """
     Check if the current process can modify the target process.
