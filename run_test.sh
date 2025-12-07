@@ -17,7 +17,7 @@ echo "=============================="
 echo "Running Autoflake to remove unused imports/variables..."
 echo "=============================="
 # Run once on all directories
-autoflake --in-place --remove-unused-variables --remove-all-unused-imports --recursive "${TARGET_DIRS[@]}"
+autoflake --in-place --remove-all-unused-imports --recursive "${TARGET_DIRS[@]}"
 
 echo "=============================="
 echo "Running Black for code formatting..."
