@@ -57,7 +57,7 @@ def read_process_start_epoch(fields: list[str]) -> float:
         ValueError: If stat fields are invalid or STARTTIME is missing.
         RuntimeError: If /proc/uptime cannot be read.
     """
-    
+
     uptime_path = "/proc/uptime"
 
     if not fields or len(fields) <= ProcessStateIndex.STARTTIME:
@@ -89,7 +89,7 @@ def _format_start_column(start_time_seconds: float) -> str:
     Returns:
         str: Formatted start time as HH:MM, MonDD, or YYYY depending on age.
     """
-    
+
     start_tm = time.localtime(start_time_seconds)
     now_tm = time.localtime(time.time())
 
@@ -101,7 +101,7 @@ def _format_start_column(start_time_seconds: float) -> str:
 
 
 def get_process_start(pid: int) -> str:
-     """
+    """
     Retrieves the ps-style START column for a process.
 
     Args:
@@ -110,6 +110,6 @@ def get_process_start(pid: int) -> str:
     Returns:
         str: Formatted start time for the process, or an error message.
     """
-    
+
     fields = read_process_stat_fields(pid)
     return _interpret_process_start(fields, pid)

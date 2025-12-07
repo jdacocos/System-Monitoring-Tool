@@ -13,6 +13,7 @@ Integrates with system monitoring tools and backend process utilities to:
 - Enable population of process lists with typed data
 - Support further analysis or display in dashboards
 """
+
 from dataclasses import dataclass
 
 

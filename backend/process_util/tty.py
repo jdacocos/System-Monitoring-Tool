@@ -46,7 +46,7 @@ def read_tty_nr_to_name(tty_nr: int) -> str:
 
 
 def get_process_tty(pid: int) -> str:
-        """
+    """
     Retrieve the human-readable TTY name for a given process.
 
     Args:

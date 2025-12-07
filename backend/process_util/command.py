@@ -70,7 +70,7 @@ def get_process_command(pid: int) -> str:
              such as "[zombie]", "[unknown]", "[kernel <pid>]",
              "[PID not found]", "[Permission denied]", or "[error]".
     """
-    
+
     result = "[unknown]"
     try:
         # 1. Try full command line first

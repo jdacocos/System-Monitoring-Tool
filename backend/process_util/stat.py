@@ -39,7 +39,7 @@ def read_process_stat_fields(pid: int) -> list[str]:
     Returns:
         list[str]: List of stat fields. Returns empty list if the file cannot be read.
     """
-    
+
     stat_path = f"/proc/{pid}/stat"
     content = read_file(stat_path)
     if not content:

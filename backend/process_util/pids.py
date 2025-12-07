@@ -13,7 +13,6 @@ Dependencies:
 - Standard Python library: os
 """
 
-
 import os
 
 

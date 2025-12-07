@@ -104,7 +104,7 @@ def get_process_cpu_percent(pid: int) -> float:
                Returns CpuStatIndex.CPU_PERCENT_INVALID if previous readings
                are missing, the process does not exist, or delta is too small.
     """
-    
+
     cpu_percent = CpuStatIndex.CPU_PERCENT_INVALID
 
     proc_jiffies_current = read_proc_pid_time(pid)

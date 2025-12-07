@@ -55,7 +55,7 @@ def _uid_to_username(uid: int) -> str | None:
 
 
 def get_process_user(pid: int) -> str | None:
-     """
+    """
     Retrieve the username that owns a specific process.
 
     Args:

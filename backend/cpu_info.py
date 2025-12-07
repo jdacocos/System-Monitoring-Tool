@@ -33,7 +33,7 @@ def get_logical_cpu_count() -> int:
     Returns:
         int: Number of logical CPU cores detected via os.cpu_count().
     """
-    
+
     return os.cpu_count()
 
 
@@ -45,7 +45,7 @@ def get_physical_cpu_count() -> int | None:
     Returns:
         int | None: Number of physical CPU cores, or None if unavailable.
     """
- 
+
     cpuinfo = read_file("/proc/cpuinfo")
     if cpuinfo is None:
         return None
@@ -193,7 +193,7 @@ def get_cpu_percent_per_core(interval: float = 0.1) -> list[float]:
 
 
 def get_cpu_stats() -> dict:
-     """
+    """
     Returns a composite dictionary of CPU statistics.
 
     Returns:
@@ -205,7 +205,7 @@ def get_cpu_stats() -> dict:
             "physical" (int | None): Number of physical CPU cores.
         }
     """
-     
+
     per_core = get_cpu_percent_per_core(interval=0.1)
     overall = sum(per_core) / len(per_core) if per_core else 0.0
 

@@ -30,11 +30,12 @@ def read_file(path: str) -> str | None:
 
     Returns:
         str | None: Decoded file contents as a string, or None if the file cannot be read.
-    
+
     Notes:
         Suitable for reading /proc filesystem entries that may contain null bytes
         or non-standard behaviors.
     """
+
     result = None
 
     try:
@@ -58,7 +59,7 @@ def read_file(path: str) -> str | None:
 
 
 def read_lines(path: str) -> list[str] | None:
-     """
+    """
     Reads a file and returns its contents as a list of lines.
 
     Args:
@@ -66,11 +67,11 @@ def read_lines(path: str) -> list[str] | None:
 
     Returns:
         list[str] | None: List of lines if the file is readable, otherwise None.
-    
+
     Notes:
         Uses read_file() internally and applies str.splitlines().
     """
-     
+
     result = None
     data = read_file(path)
 
@@ -91,7 +92,7 @@ def read_cmdline(path: str) -> str | None:
         str | None: Command line with null bytes replaced by spaces,
                     or None if the file cannot be read.
     """
-    
+
     result = None
     data = read_file(path)
 

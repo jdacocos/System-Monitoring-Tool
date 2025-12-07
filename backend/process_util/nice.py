@@ -29,7 +29,7 @@ def get_process_nice(pid: int) -> int:
         int: Nice value of the process (NI column in ps aux).
              Returns 0 for kernel threads, unreadable processes, or on errors.
     """
-    
+
     nice_val = 0
 
     try:

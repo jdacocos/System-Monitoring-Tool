@@ -30,7 +30,7 @@ def get_process_mem_percent(pid: int) -> float:
                Returns MemInfoIndex.MEM_INVALID if total system memory
                is unreadable or zero.
     """
-    
+
     rss_kb = get_process_rss(pid)
     total_mem_kb = read_meminfo_total()
 

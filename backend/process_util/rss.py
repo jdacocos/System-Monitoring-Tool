@@ -65,7 +65,7 @@ def get_process_rss(pid: int) -> int:
         int: RSS in KB for the process.
              Returns 0 if the process does not exist, cannot be read, or an error occurs.
     """
-    
+
     rss_kb = 0
     statm_content: str | None = read_file(f"/proc/{pid}/statm")
 
