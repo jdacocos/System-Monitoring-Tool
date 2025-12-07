@@ -14,23 +14,23 @@ A lightweight, multithreaded system monitoring application designed to retrieve,
 ### **Setup**
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/your-username/system-monitoring-tool.git
-   cd system-monitoring-tool
-   ```
+```bash
+git clone https://github.com/your-username/system-monitoring-tool.git
+cd system-monitoring-tool
+```
 2. **Install dependencies**
-  Make sure you have requirements.txt in the project root, then run:
-  ```bash
-  pip install -r requirements.txt
-  ```
+Make sure you have requirements.txt in the project root, then run:
+```bash
+pip install -r requirements.txt
+```
 4. **Run the application**
-  ```bash
-  python3 main.py
-  ```
-  Some features (e.g., lowering nice values) may require elevated privileges:
-  ```bash
-  sudo python3 main.py
-  ```
+```bash
+python3 main.py
+```
+Some features (e.g., lowering nice values) may require elevated privileges:
+```bash
+sudo python3 main.py
+```
 
 ## Features
 
@@ -40,7 +40,7 @@ A lightweight, multithreaded system monitoring application designed to retrieve,
 - **CPU monitoring** — Displays live CPU usage across all available cores.
 - **Memory monitoring** — Tracks system memory usage, swap activity, and overall resource consumption.
 - **Process page** — Provides detailed per-process information such as PID, CPU usage, memory usage, state, and TTY.
-- **Signal-based process control** — Supports responsive and safe signaling mechanisms such as `SIGTERM` and `SIGKILL`.
+- **Signal-based process control** — Supports responsive and safe signalling mechanisms such as `SIGTERM` and `SIGKILL`.
 - **Process termination (kill)** — Users can terminate running processes directly from the UI.
 - **Adjust process priority (nice value)**  
   - Users can increase a process’s nice value (lower priority) without elevated privileges.  
