@@ -7,7 +7,7 @@ Shows:
 - Logical and physical CPU counts
 - Current CPU frequency
 - Per-core CPU usage percentages over a time interval
-- Composite CPU statistics including overall usage
+- Composite CPU statistics, including overall usage
 
 Integrates with backend file helpers to:
 - Parse /proc/cpuinfo for core counts and frequency
@@ -28,7 +28,7 @@ CpuFreq = namedtuple("CpuFreq", ["current", "min", "max"])
 
 def get_logical_cpu_count() -> int:
     """
-    Returns the number of logical CPUs in the system.
+    Gets the number of logical CPUs in the system.
 
     Returns:
         int: Number of logical CPU cores detected via os.cpu_count().
