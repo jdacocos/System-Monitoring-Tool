@@ -3,12 +3,22 @@ page_helpers.py
 
 Utility functions for managing curses-based frontend pages.
 
-This module provides helpers for rendering and updating interactive pages
-in the terminal UI. It includes a generic page loop that handles:
+Shows:
+- Generic page loop for rendering and updating interactive pages
+- Keyboard input handling
+- Screen refreshes at configurable intervals
+
+Integrates with the generic page loop to handle:
 - Window creation and layout
 - Page-specific content rendering
 - Keyboard input handling
-- Screen refreshes at configurable intervals
+- Refresh cycles for curses windows
+
+Dependencies:
+- curses (standard library)
+- time (standard library)
+- frontend.utils.input_helpers
+- frontend.utils.ui_helpers
 """
 
 import curses
@@ -27,19 +37,29 @@ def run_page_loop(
     render_content_fn,
     sleep_time: float = 0.3,
 ) -> int:
-    """Generic curses page loop for CPU, memory, disk, network, or dashboard pages.
+    """
+    Generic curses page loop for rendering interactive pages.
 
-    Parameters:
-        stdscr: main curses window
-        title: window title
-        nav_items: navigation menu items
-        active_page: string identifier of active page
-        render_content_fn: function called with content_win to draw page-specific content
-        sleep_time: delay between refreshes
+    Handles:
+    - Initializing colors
+    - Creating and updating the content window
+    - Calling page-specific rendering functions
+    - Capturing keyboard input
+    - Refreshing the screen at configurable intervals
+
+    Args:
+        stdscr (curses.window): Main curses window provided by curses.wrapper.
+        title (str): Title of the page/window.
+        nav_items (list[tuple[str, str, str]]): List of navigation items (id, name, key).
+        active_page (str): Identifier for the currently active page.
+        render_content_fn (Callable): Function to render page-specific content;
+            called with content_win.
+        sleep_time (float, optional): Delay between screen refreshes in seconds. Defaults to 0.3.
 
     Returns:
-        key pressed if exit requested, else loop indefinitely
+        int: The key code pressed that triggered an exit, or continues looping indefinitely.
     """
+
     init_colors()
     curses.curs_set(0)
     stdscr.nodelay(True)

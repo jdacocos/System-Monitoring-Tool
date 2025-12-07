@@ -6,10 +6,24 @@ Main entry point for the interactive terminal UI.
 Provides a curses-based interface for navigating between different system
 monitoring pages: Dashboard, CPU, Processes, Network, Memory, and Disk I/O.
 
-Features:
+Shows:
 - Keyboard navigation between pages using assigned keys
 - Handles page rendering and switching
 - Exits cleanly on 'q' or 'Q'
+
+Integrates with the generic page loop to handle:
+- Window rendering
+- Keyboard input
+- Screen refreshes
+
+Dependencies:
+- curses (standard library)
+- frontend.pages.dashboard_page.render_dashboard
+- frontend.pages.cpu_page.render_cpu
+- frontend.pages.process_page.process_page.render_processes
+- frontend.pages.memory_page.render_memory
+- frontend.pages.network_page.render_network
+- frontend.pages.disk_page.render_disk
 """
 
 import curses

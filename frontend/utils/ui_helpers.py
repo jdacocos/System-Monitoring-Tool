@@ -1,4 +1,25 @@
-"""Utility helpers for rendering curses-based user interfaces."""
+"""
+ui_helpers.py
+
+Utility helpers for rendering curses-based user interfaces.
+
+Shows:
+- Header, footer, and sidebar rendering
+- Content windows with borders and labels
+- Horizontal usage bars and sparklines
+- Byte formatting utilities
+
+Integrates with the generic page loop to handle:
+- Window creation and layout
+- Page-specific content rendering
+- Keyboard input display
+- Screen refreshes with dynamic data
+
+Dependencies:
+- curses (standard library)
+- datetime (standard library)
+- typing (standard library)
+"""
 
 from __future__ import annotations
 import curses
@@ -15,7 +36,13 @@ MIN_WIDTH = 80
 
 
 def init_colors() -> None:
-    """Initialize the color palette used throughout the application."""
+    """
+    Initialize the color palette used throughout the application.
+
+    Returns:
+        None
+    """
+
     curses.start_color()
     curses.use_default_colors()
     curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)  # Header / footer
@@ -28,7 +55,17 @@ def init_colors() -> None:
 
 
 def draw_header(stdscr: curses.window, title: str) -> None:
-    """Render the top header banner with a dynamically updating timestamp."""
+    """
+    Render the top header banner with a dynamically updating timestamp.
+
+    Args:
+        stdscr (curses.window): Main curses window
+        title (str): Title to display in the header
+
+    Returns:
+        None
+    """
+
     _, width = stdscr.getmaxyx()
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     stdscr.attron(curses.color_pair(1) | curses.A_BOLD)
@@ -41,7 +78,18 @@ def draw_header(stdscr: curses.window, title: str) -> None:
 def draw_sidebar(
     stdscr: curses.window, nav_items: Sequence[tuple[str, str, str]], active_page: str
 ) -> None:
-    """Render the navigation sidebar highlighting the active page."""
+    """
+    Render the navigation sidebar highlighting the active page.
+
+    Args:
+        stdscr (curses.window): Main curses window
+        nav_items (Sequence[tuple[str, str, str]]): List of page_id, label, key
+        active_page (str): Identifier of the currently active page
+
+    Returns:
+        None
+    """
+
     height, _ = stdscr.getmaxyx()
     stdscr.attron(curses.color_pair(7))
     for y in range(1, height - 1):
@@ -69,7 +117,17 @@ def draw_sidebar(
 def draw_footer(
     stdscr: curses.window, nav_items: Iterable[tuple[str, str, str]]
 ) -> None:
-    """Render a footer with contextual key bindings."""
+    """
+    Render a footer with contextual key bindings.
+
+    Args:
+        stdscr (curses.window): Main curses window
+        nav_items (Iterable[tuple[str, str, str]]): List of page_id, label, key
+
+    Returns:
+        None
+    """
+
     height, width = stdscr.getmaxyx()
     instructions = (
         "  ".join(f"[{key}] {label}" for _, label, key in nav_items) + "  [q] Quit"
@@ -90,11 +148,18 @@ def draw_content_window(
     active_page: str,
 ) -> curses.window | None:
     """
-    Draw the base layout consisting of header, sidebar, content area, and footer.
+    Draw the base layout: header, sidebar, content area, and footer.
 
-    Returns the content window where individual pages can render information.
-    If the terminal is too small, a message is rendered and ``None`` is returned.
+    Args:
+        stdscr (curses.window): Main curses window
+        title (str): Page title
+        nav_items (Sequence[tuple[str, str, str]]): Navigation items
+        active_page (str): Currently active page
+
+    Returns:
+        curses.window | None: Window object for content area or None if terminal too small
     """
+
     height, width = stdscr.getmaxyx()
     if height < MIN_HEIGHT or width < MIN_WIDTH:
         stdscr.erase()
@@ -131,7 +196,21 @@ def draw_content_window(
 def draw_bar(
     stdscr: curses.window, y: int, x: int, label: str, value: float, width: int = 34
 ) -> None:
-    """Draw a horizontal usage bar inside the given window."""
+    """
+    Draw a horizontal usage bar inside the given window.
+
+    Args:
+        stdscr (curses.window): Window to draw into
+        y (int): Row position
+        x (int): Column position
+        label (str): Metric label
+        value (float): Percentage value (0–100)
+        width (int): Width of the bar in characters
+
+    Returns:
+        None
+    """
+
     value = max(0.0, min(value, 100.0))
     filled = int((value / 100) * width)
     bar_str = "█" * filled + "░" * (width - filled)
@@ -142,7 +221,18 @@ def draw_bar(
 
 
 def draw_section_header(stdscr: curses.window, y: int, text: str) -> None:
-    """Render a section header inside the provided window."""
+    """
+    Render a section header inside the provided window.
+
+    Args:
+        stdscr (curses.window): Window to draw into
+        y (int): Row position
+        text (str): Header text
+
+    Returns:
+        None
+    """
+
     stdscr.attron(curses.color_pair(2) | curses.A_BOLD)
     stdscr.addstr(y, 2, text)
     stdscr.attroff(curses.color_pair(2) | curses.A_BOLD)
@@ -160,7 +250,25 @@ def draw_sparkline(
     fixed_min: float | None = None,
     fixed_max: float | None = None,
 ) -> None:
-    """Render a simple one-line sparkline graph for recent samples."""
+    """
+    Render a simple one-line sparkline graph for recent samples.
+
+    Args:
+        stdscr (curses.window): Window to draw into
+        y (int): Row position
+        x (int): Column position
+        data (Sequence[float]): List of data points
+        width (int): Maximum width of sparkline
+        label (str): Metric label
+        unit (str, optional): Unit to display after value. Defaults to ""
+        color_pair (int, optional): Color pair for sparkline. Defaults to 2
+        fixed_min (float | None, optional): Minimum value for scaling. Defaults to None
+        fixed_max (float | None, optional): Maximum value for scaling. Defaults to None
+
+    Returns:
+        None
+    """
+
     if not data or width <= 0:
         return
 
@@ -204,7 +312,16 @@ def draw_sparkline(
 
 
 def format_bytes(num_bytes: float) -> str:
-    """Return a human readable string for a byte value."""
+    """
+    Return a human readable string for a byte value.
+
+    Args:
+        num_bytes (float): Number of bytes
+
+    Returns:
+        str: Human-readable string (e.g., "1.2 KB", "3.4 MB")
+    """
+
     for unit in ["B", "KB", "MB", "GB", "TB"]:
         if num_bytes < 1024:
             return f"{num_bytes:6.1f} {unit}"
