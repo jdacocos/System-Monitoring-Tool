@@ -55,13 +55,8 @@ def get_network_stats(
     return stats, new_net, new_time
 
 
-UPLOAD_HISTORY: deque[float] = deque(maxlen=120)
-DOWNLOAD_HISTORY: deque[float] = deque(maxlen=120)
-
-
 def render_network_stats(win: curses.window, stats: dict) -> int:
     """Render upload/download speeds and totals using module-level history."""
-    from frontend.pages.network_page import upload_history, download_history
 
     draw_section_header(win, 1, "Throughput")
     color_sent = 3 if stats["sent_speed"] < 5 else 4
@@ -142,10 +137,10 @@ def _render_throughput(win: curses.window, stats: dict) -> int:
 
     width = win.getmaxyx()[1] - 6
     draw_sparkline(
-        win, 8, 2, list(UPLOAD_HISTORY), width=width, label="Upload", unit=" MB/s"
+        win, 8, 2, list(upload_history), width=width, label="Upload", unit=" MB/s"
     )
     draw_sparkline(
-        win, 9, 2, list(DOWNLOAD_HISTORY), width=width, label="Download", unit=" MB/s"
+        win, 9, 2, list(download_history), width=width, label="Download", unit=" MB/s"
     )
 
     return 11
@@ -173,16 +168,16 @@ def render_network_page(content_win: curses.window) -> None:
 
     Uses private helpers to calculate speeds and draw throughput and interfaces.
     """
-    old_net = getattr(render_network_page, "_prev_net", psutil.net_io_counters())
-    old_time = getattr(render_network_page, "_prev_time", time.time())
+    old_net = getattr(render_network_page, "prev_net", psutil.net_io_counters())
+    old_time = getattr(render_network_page, "prev_time", time.time())
 
     stats, new_net, new_time = _calculate_network_speeds(old_net, old_time)
 
     upload_history.append(max(0.0, stats["sent_speed"]))
     download_history.append(max(0.0, stats["recv_speed"]))
 
-    render_network_page._prev_net = new_net
-    render_network_page._prev_time = new_time
+    render_network_page.prev_net = new_net
+    render_network_page.prev_time = new_time
 
     next_y = _render_throughput(content_win, stats)
     _render_interfaces(content_win, stats["interfaces"], start_y=next_y)
