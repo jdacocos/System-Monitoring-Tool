@@ -3,7 +3,7 @@ network_page.py
 
 Network monitoring page for the interactive terminal UI.
 
-Provides real-time information on:
+Shows:
 - Upload and download speeds (MB/s)
 - Total bytes sent and received
 - Historical throughput trends via sparklines
@@ -13,6 +13,14 @@ Integrates with the generic page loop to handle:
 - Window rendering
 - Keyboard input
 - Screen refreshes
+
+Dependencies:
+- curses
+- time
+- collections.deque
+- psutil
+- frontend.utils.ui_helpers
+- frontend.utils.page_helpers
 """
 
 import curses
@@ -36,7 +44,20 @@ download_history: deque[float] = deque(maxlen=120)
 def get_network_stats(
     old_net, old_time: float
 ) -> tuple[dict, psutil._common.snetio, float]:
-    """Fetch network stats and calculate upload/download speeds."""
+    """
+    Fetch network statistics and calculate upload/download speeds.
+
+    Args:
+        old_net (psutil._common.snetio): Previous network counters.
+        old_time (float): Timestamp of previous counters.
+
+    Returns:
+        tuple[dict, psutil._common.snetio, float]:
+            - stats (dict): Dictionary containing sent/recv speeds, totals, and interfaces.
+            - new_net (psutil._common.snetio): Current network counters.
+            - new_time (float): Timestamp of current counters.
+    """
+
     new_net = psutil.net_io_counters()
     new_time = time.time()
     elapsed = new_time - old_time
@@ -56,7 +77,16 @@ def get_network_stats(
 
 
 def render_network_stats(win: curses.window, stats: dict) -> int:
-    """Render upload/download speeds and totals using module-level history."""
+    """
+    Render network throughput (upload/download) with totals and sparklines.
+
+    Args:
+        win (curses.window): Window to render content.
+        stats (dict): Network statistics including speeds and totals.
+
+    Returns:
+        int: The next Y position after rendering content.
+    """
 
     draw_section_header(win, 1, "Throughput")
     color_sent = 3 if stats["sent_speed"] < 5 else 4
@@ -87,7 +117,14 @@ def render_network_stats(win: curses.window, stats: dict) -> int:
 def render_active_interfaces(
     win: curses.window, interfaces: dict, start_y: int
 ) -> None:
-    """Display up to four active network interfaces with their IP addresses."""
+    """
+    Display up to four active network interfaces with IP addresses.
+
+    Args:
+        win (curses.window): Window to render content.
+        interfaces (dict): Mapping of interface names to addresses.
+        start_y (int): Starting Y position to render.
+    """
 
     draw_section_header(win, start_y, "Active Interfaces")
 
@@ -108,7 +145,21 @@ def render_active_interfaces(
 def _calculate_network_speeds(
     old_net, old_time: float
 ) -> tuple[dict, psutil._common.snetio, float]:
-    """Calculate upload/download speeds and return updated stats."""
+    """
+    Helper:
+    Calculate upload/download speeds and return updated stats.
+
+    Args:
+        old_net (psutil._common.snetio): Previous network counters.
+        old_time (float): Timestamp of previous counters.
+
+    Returns:
+        tuple[dict, psutil._common.snetio, float]:
+            - stats (dict): Network stats including speeds and totals.
+            - new_net (psutil._common.snetio): Current network counters.
+            - new_time (float): Current timestamp.
+    """
+
     new_net = psutil.net_io_counters()
     new_time = time.time()
     elapsed = max(new_time - old_time, 1e-6)
@@ -128,7 +179,18 @@ def _calculate_network_speeds(
 
 
 def _render_throughput(win: curses.window, stats: dict) -> int:
-    """Render upload/download speeds and totals."""
+    """
+    Helper:
+    Render throughput section with upload/download speeds and totals.
+
+    Args:
+        win (curses.window): Window to render content.
+        stats (dict): Network statistics.
+
+    Returns:
+        int: Next Y position after rendering.
+    """
+
     draw_section_header(win, 1, "Throughput")
     win.addstr(2, 2, f"Upload   : {stats['sent_speed']:6.2f} MB/s")
     win.addstr(3, 2, f"Download : {stats['recv_speed']:6.2f} MB/s")
@@ -147,7 +209,16 @@ def _render_throughput(win: curses.window, stats: dict) -> int:
 
 
 def _render_interfaces(win: curses.window, interfaces: dict, start_y: int) -> None:
-    """Render up to four active network interfaces with IP addresses."""
+    """
+    Helper:
+    Render active network interfaces with IP addresses (up to 4).
+
+    Args:
+        win (curses.window): Window to render content.
+        interfaces (dict): Network interfaces mapping.
+        start_y (int): Starting Y position.
+    """
+
     draw_section_header(win, start_y, "Active Interfaces")
 
     for i, (iface, addrs) in enumerate(interfaces.items()):
@@ -164,10 +235,14 @@ def _render_interfaces(win: curses.window, interfaces: dict, start_y: int) -> No
 
 def render_network_page(content_win: curses.window) -> None:
     """
-    Render Network Monitor page content.
+    Render the Network Monitor page content.
 
-    Uses private helpers to calculate speeds and draw throughput and interfaces.
+    Uses private helpers to calculate speeds, update history, and render throughput and interfaces.
+
+    Args:
+        content_win (curses.window): Window for page content.
     """
+
     old_net = getattr(render_network_page, "prev_net", psutil.net_io_counters())
     old_time = getattr(render_network_page, "prev_time", time.time())
 
@@ -186,7 +261,18 @@ def render_network_page(content_win: curses.window) -> None:
 def render_network(
     stdscr: curses.window, nav_items: list[tuple[str, str, str]], active_page: str
 ) -> int:
-    """Launch the Network Monitor page loop using the generic `run_page_loop`."""
+    """
+    Launch the Network Monitor page loop using the generic `run_page_loop`.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+        nav_items (list[tuple[str, str, str]]): Navigation menu items.
+        active_page (str): Identifier of the currently active page.
+
+    Returns:
+        int: Key code for quit/navigation action.
+    """
+
     return run_page_loop(
         stdscr,
         title="Network Monitor",

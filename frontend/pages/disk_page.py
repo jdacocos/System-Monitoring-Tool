@@ -3,16 +3,24 @@ disk_page.py
 
 Disk monitoring page for the interactive terminal UI.
 
-Provides real-time information on:
-- Disk usage for mounted partitions (with usage bars)
-- Disk I/O throughput (read/write speeds)
-- Total read/write amounts
-- Historical trends via sparklines
+Shows:
+- Disk usage for mounted partitions with visual usage bars
+- Real-time disk I/O throughput (read/write speeds)
+- Total read and write amounts
+- Historical trends via sparklines for read/write speeds
 
 Integrates with the generic page loop to handle:
 - Window rendering
 - Keyboard input
 - Screen refreshes
+
+Dependencies:
+- curses
+- time
+- collections.deque
+- psutil
+- frontend.utils.ui_helpers
+- frontend.utils.page_helpers
 """
 
 import curses
@@ -35,7 +43,16 @@ WRITE_HISTORY: deque[float] = deque(maxlen=120)
 def get_disk_stats(
     previous_io: psutil._common.sdiskio | None, previous_time: float
 ) -> tuple[dict, psutil._common.sdiskio, float]:
-    """Collect disk usage, partition details, and I/O throughput."""
+    """
+    Collect disk usage, partition details, and I/O throughput.
+
+    Args:
+        previous_io (sdiskio | None): Previous I/O counters.
+        previous_time (float): Timestamp of previous counters.
+
+    Returns:
+        tuple[dict, sdiskio, float]: Disk stats, current I/O counters, timestamp
+    """
 
     if previous_io is None:
         previous_io = psutil.disk_io_counters()
@@ -79,7 +96,17 @@ def get_disk_stats(
 
 
 def render_disk_usage(win: curses.window, partitions: list[dict], start_y: int) -> int:
-    """Render a set of disk usage bars for mounted partitions."""
+    """
+    Render a set of disk usage bars for mounted partitions.
+
+    Args:
+        win (curses.window): Window to draw on.
+        partitions (list[dict]): List of partition info.
+        start_y (int): Starting y-coordinate.
+
+    Returns:
+        int: Updated y-coordinate after rendering.
+    """
 
     draw_section_header(win, start_y, "Disk Usage")
     y = start_y + 1
@@ -110,7 +137,16 @@ def render_disk_io(
     write_history: deque[float],
     start_y: int,
 ) -> None:
-    """Render current disk I/O speeds with historical sparklines."""
+    """
+    Render current disk I/O speeds with historical sparklines.
+
+    Args:
+        win (curses.window): Window to draw on.
+        stats (dict): Disk stats containing read/write speeds and totals.
+        read_history (deque[float]): Historical read speeds.
+        write_history (deque[float]): Historical write speeds.
+        start_y (int): Starting y-coordinate.
+    """
 
     draw_section_header(win, start_y, "I/O Activity")
 
@@ -145,8 +181,13 @@ def render_disk_io(
 
 def _collect_io_stats() -> tuple[float, float]:
     """
+    Helper:
     Collect disk I/O stats and compute read/write speeds (MB/s).
+
+    Returns:
+        tuple[float, float]: Current read and write speeds.
     """
+
     prev_io = getattr(_collect_io_stats, "prev_io", None)
     prev_time = getattr(_collect_io_stats, "prev_time", time.time())
 
@@ -170,8 +211,13 @@ def _collect_io_stats() -> tuple[float, float]:
 
 def _collect_partitions() -> list[dict]:
     """
+    Helper:
     Collect mounted partitions and usage info.
+
+    Returns:
+        list[dict]: Top 4 partitions sorted by usage percentage.
     """
+
     partitions = []
 
     for p in psutil.disk_partitions():
@@ -197,8 +243,18 @@ def _render_disk_usage(
     content_win: curses.window, y: int, partitions: list[dict]
 ) -> int:
     """
+    Helper:
     Render the Disk Usage section and return the updated y position.
+
+    Args:
+        content_win (curses.window): Window to draw on.
+        y (int): Starting y-coordinate.
+        partitions (list[dict]): List of partitions.
+
+    Returns:
+        int: Updated y-coordinate.
     """
+
     draw_section_header(content_win, y, "Disk Usage")
     y += 1
 
@@ -222,8 +278,16 @@ def _render_io_activity(
     write_speed: float,
 ) -> None:
     """
+    Helper:
     Render the I/O speeds and historical sparklines.
+
+    Args:
+        content_win (curses.window): Window to draw on.
+        y (int): Starting y-coordinate.
+        read_speed (float): Current read speed in MB/s.
+        write_speed (float): Current write speed in MB/s.
     """
+
     draw_section_header(content_win, y, "I/O Activity")
     y += 1
 
@@ -249,8 +313,12 @@ def _render_io_activity(
 
 def render_disk_page(content_win: curses.window) -> None:
     """
-    Render the Disk & I/O monitor page.
+    Render the Disk & I/O monitor page content.
+
+    Args:
+        content_win (curses.window): Window to draw page content.
     """
+
     # 1. Collect stats
     read_speed, write_speed = _collect_io_stats()
     partitions = _collect_partitions()
@@ -269,7 +337,16 @@ def render_disk(
 ) -> int:
     """
     Launch the Disk Monitor page loop using the generic `run_page_loop`.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+        nav_items (list[tuple[str, str, str]]): Navigation items.
+        active_page (str): Currently active page identifier.
+
+    Returns:
+        int: Key code of quit/navigation key if pressed.
     """
+
     return run_page_loop(
         stdscr,
         title="Disk & I/O Monitor",

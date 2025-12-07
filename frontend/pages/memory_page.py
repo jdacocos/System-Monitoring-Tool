@@ -3,7 +3,7 @@ memory_page.py
 
 Memory monitoring page for the interactive terminal UI.
 
-Shows RAM and swap usage in real-time, including:
+Shows:
 - Physical memory usage bars and details (total, used, free)
 - Swap memory usage bars and details (total, used, free)
 
@@ -11,6 +11,12 @@ Integrates with the generic page loop to handle:
 - Window rendering
 - Keyboard input
 - Screen refreshes
+
+Dependencies:
+- curses
+- frontend.utils.ui_helpers
+- frontend.utils.page_helpers
+- backend.memory_info
 """
 
 import curses
@@ -28,7 +34,12 @@ from backend.memory_info import (
 
 
 def get_memory_stats() -> dict:
-    """Fetch memory and swap usage statistics."""
+    """
+    Fetch memory and swap usage statistics.
+
+    Returns:
+        dict: Dictionary containing 'mem' and 'swap' memory stats.
+    """
 
     mem = get_virtual_memory()
     swap = get_swap_memory()
@@ -36,7 +47,16 @@ def get_memory_stats() -> dict:
 
 
 def render_memory_details(win: curses.window, mem) -> None:
-    """Render main RAM usage bar and memory details."""
+    """
+    Render main RAM usage bar and memory details.
+
+    Args:
+        win (curses.window): Window to draw on.
+        mem: Virtual memory stats object.
+
+    Returns:
+        None
+    """
 
     draw_section_header(win, 1, "Physical Memory")
     draw_bar(win, 2, 2, "RAM", mem.percent)
@@ -46,7 +66,13 @@ def render_memory_details(win: curses.window, mem) -> None:
 
 
 def render_swap_details(win: curses.window, swap) -> None:
-    """Render swap memory usage bar and details."""
+    """
+    Render main RAM usage bar and memory details.
+
+    Args:
+        win (curses.window): Window to draw on.
+        mem: Virtual memory stats object.
+    """
 
     draw_section_header(win, 8, "Swap Memory")
     draw_bar(win, 9, 2, "Swap", swap.percent)
@@ -58,7 +84,14 @@ def render_swap_details(win: curses.window, swap) -> None:
 def render_memory_page(content_win: curses.window) -> None:
     """
     Render the Memory Monitor page content inside the given content window.
+
+    Args:
+        content_win (curses.window): Window to draw page content.
+
+    Returns:
+        None
     """
+
     mem = get_virtual_memory()
     swap = get_swap_memory()
 
@@ -82,7 +115,16 @@ def render_memory(
 ) -> int:
     """
     Launch the Memory Monitor page loop using the generic `run_page_loop`.
+
+    Args:
+        stdscr (curses.window): Main curses window.
+        nav_items (list[tuple[str, str, str]]): Navigation items.
+        active_page (str): Currently active page identifier.
+
+    Returns:
+        int: Key code of quit/navigation key if pressed.
     """
+
     return run_page_loop(
         stdscr,
         title="Memory Monitor",

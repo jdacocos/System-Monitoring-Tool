@@ -3,7 +3,8 @@ cpu_page.py
 
 CPU monitoring page for the interactive terminal UI.
 
-Displays overall and per-core CPU usage in real-time, including:
+Shows:
+- Overall and per-core CPU usage in real-time
 - CPU percentage per core and overall
 - CPU frequency information (current, min, max)
 - Logical and physical core counts
@@ -13,6 +14,13 @@ Integrates with the generic page loop to handle:
 - Window rendering
 - Keyboard input
 - Screen refreshes
+
+Dependencies:
+- curses
+- collections.deque
+- frontend.utils.ui_helpers
+- frontend.utils.page_helpers
+- backend.cpu_info
 """
 
 import curses
@@ -36,7 +44,18 @@ CPU_HISTORY: deque[float] = deque(maxlen=120)
 
 
 def get_cpu_stats() -> dict:
-    """Fetch and return key CPU statistics."""
+    """
+    Fetch and return key CPU statistics.
+
+    Returns:
+        dict: {
+            "overall": overall CPU usage percentage,
+            "per_core": list of per-core CPU usage percentages,
+            "freq": CPU frequency info object or None,
+            "logical": number of logical CPUs,
+            "physical": number of physical cores
+        }
+    """
 
     per_core = get_cpu_percent_per_core(interval=0.1)
     overall = sum(per_core) / len(per_core) if per_core else 0.0
@@ -51,7 +70,17 @@ def get_cpu_stats() -> dict:
 
 
 def render_overall_cpu(win: curses.window, stats: dict, history: deque[float]) -> int:
-    """Render overall CPU usage and frequency information."""
+    """
+    Render overall CPU usage and frequency information.
+
+    Parameters:
+        win (curses.window): Window to draw content.
+        stats (dict): CPU stats dictionary returned by get_cpu_stats().
+        history (deque): Historical CPU usage values for sparklines.
+
+    Returns:
+        int: The y-coordinate below the rendered section.
+    """
 
     freq = stats["freq"]
     draw_section_header(win, 1, "Overall CPU")
@@ -88,8 +117,17 @@ def render_overall_cpu(win: curses.window, stats: dict, history: deque[float]) -
 
 def _compute_core_layout(win: curses.window) -> dict:
     """
+    Helper:
     Compute layout parameters for per-core CPU display.
+
+    Parameters:
+        win (curses.window): Window to draw content.
+
+    Returns:
+        dict: Layout configuration including 'height', 'cols', 'column_width',
+              and 'bar_width'.
     """
+
     height, width = win.getmaxyx()
     available_width = max(24, width - 4)
 
@@ -113,9 +151,20 @@ def _render_single_core(
     start_y: int,
 ) -> bool:
     """
+    Helper:
     Render a single per-core usage bar.
-    Returns False if it cannot fit on screen (to stop rendering).
+
+    Parameters:
+        win (curses.window): Window to draw content.
+        layout (dict): Layout dictionary from _compute_core_layout().
+        core_index (int): Index of the CPU core.
+        usage_value (float): CPU usage percentage for this core.
+        start_y (int): Starting y-coordinate for rendering.
+
+    Returns:
+        bool: False if rendering exceeds available screen space; True otherwise.
     """
+
     row = core_index // layout["cols"]
     col = core_index % layout["cols"]
 
@@ -133,7 +182,14 @@ def _render_single_core(
 def render_per_core_usage(
     win: curses.window, per_core: list[float], start_y: int = 8
 ) -> None:
-    """Render per-core CPU usage bars in a responsive grid."""
+    """
+    Render per-core CPU usage bars in a responsive grid.
+
+    Parameters:
+        win (curses.window): Window to draw content.
+        per_core (list[float]): List of per-core CPU usage percentages.
+        start_y (int, optional): Y-coordinate to start rendering. Defaults to 8.
+    """
 
     draw_section_header(win, start_y - 1, "Per-Core Usage")
 
@@ -146,8 +202,12 @@ def render_per_core_usage(
 
 def render_cpu_page(content_win: curses.window) -> None:
     """
-    Render the CPU monitoring page content inside the given content window.
+    Render the CPU monitoring page content.
+
+    Parameters:
+        content_win (curses.window): Content window from the page loop.
     """
+
     stats = get_cpu_stats()
     CPU_HISTORY.append(stats["overall"])
 
@@ -164,10 +224,15 @@ def render_cpu(
     """
     Launch the CPU Monitor page loop.
 
-    This function delegates all curses setup, window drawing, input handling,
-    and refresh logic to the generic `run_page_loop`, passing the page-specific
-    rendering function.
+    Parameters:
+        stdscr (curses.window): Main curses window from curses.wrapper.
+        nav_items (list[tuple[str, str, str]]): Navigation menu items.
+        active_page (str): Currently active page identifier.
+
+    Returns:
+        int: Key pressed to exit or switch pages.
     """
+
     return run_page_loop(
         stdscr,
         title="CPU Monitor",
