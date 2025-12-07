@@ -1,13 +1,13 @@
 """
-disk_page.py
+network_page.py
 
-Disk monitoring page for the interactive terminal UI.
+Network monitoring page for the interactive terminal UI.
 
 Provides real-time information on:
-- Disk usage for mounted partitions (with usage bars)
-- Disk I/O throughput (read/write speeds)
-- Total read/write amounts
-- Historical trends via sparklines
+- Upload and download speeds (MB/s)
+- Total bytes sent and received
+- Historical throughput trends via sparklines
+- Active network interfaces with their IP addresses
 
 Integrates with the generic page loop to handle:
 - Window rendering

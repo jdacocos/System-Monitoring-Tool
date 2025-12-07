@@ -86,6 +86,50 @@ def render_overall_cpu(win: curses.window, stats: dict, history: deque[float]) -
     return 7
 
 
+def _compute_core_layout(win: curses.window) -> dict:
+    """
+    Compute layout parameters for per-core CPU display.
+    """
+    height, width = win.getmaxyx()
+    available_width = max(24, width - 4)
+
+    column_width = 28
+    cols = max(1, available_width // column_width)
+    bar_width = max(10, column_width - 14)
+
+    return {
+        "height": height,
+        "cols": cols,
+        "column_width": column_width,
+        "bar_width": bar_width,
+    }
+
+
+def _render_single_core(
+    win: curses.window,
+    layout: dict,
+    core_index: int,
+    usage_value: float,
+    start_y: int,
+) -> bool:
+    """
+    Render a single per-core usage bar.
+    Returns False if it cannot fit on screen (to stop rendering).
+    """
+    row = core_index // layout["cols"]
+    col = core_index % layout["cols"]
+
+    y = start_y + row * 2
+    x = 2 + col * layout["column_width"]
+
+    if y >= layout["height"] - 2:
+        return False  # Stop rendering if there's no space
+
+    label = f"Core {core_index + 1:02d}"
+    draw_bar(win, y, x, label, usage_value, width=layout["bar_width"])
+    return True
+
+
 def render_per_core_usage(
     win: curses.window, per_core: list[float], start_y: int = 8
 ) -> None:
@@ -93,23 +137,11 @@ def render_per_core_usage(
 
     draw_section_header(win, start_y - 1, "Per-Core Usage")
 
-    height, width = win.getmaxyx()
-    available_width = max(24, width - 4)
-    column_width = 28
-    cols = max(1, available_width // column_width)
-    bar_width = max(10, column_width - 14)
+    layout = _compute_core_layout(win)
 
     for index, value in enumerate(per_core):
-        row = index // cols
-        col = index % cols
-        y = start_y + row * 2
-        x = 2 + col * column_width
-
-        if y >= height - 2:
+        if not _render_single_core(win, layout, index, value, start_y):
             break
-
-        label = f"Core {index + 1:02d}"
-        draw_bar(win, y, x, label, value, width=bar_width)
 
 
 def render_cpu_page(content_win: curses.window) -> None:

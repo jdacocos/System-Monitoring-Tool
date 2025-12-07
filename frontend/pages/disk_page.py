@@ -16,9 +16,9 @@ Integrates with the generic page loop to handle:
 """
 
 import curses
+import time
 from collections import deque
 import psutil
-import time
 
 from frontend.utils.ui_helpers import (
     draw_section_header,
@@ -143,32 +143,43 @@ def render_disk_io(
     )
 
 
-def render_disk_page(content_win: curses.window) -> None:
+def _collect_io_stats() -> tuple[float, float]:
     """
-    Render Disk & I/O Monitor page content.
+    Collect disk I/O stats and compute read/write speeds (MB/s).
     """
-    # Gather disk usage and I/O stats
-    previous_io = getattr(render_disk_page, "_prev_io", None)
-    previous_time = getattr(render_disk_page, "_prev_time", time.time())
-    if previous_io is None:
-        previous_io = psutil.disk_io_counters()
-        render_disk_page._prev_io = previous_io
+    prev_io = getattr(_collect_io_stats, "prev_io", None)
+    prev_time = getattr(_collect_io_stats, "prev_time", time.time())
+
+    if prev_io is None:
+        prev_io = psutil.disk_io_counters()
+        _collect_io_stats.prev_io = prev_io
 
     current_io = psutil.disk_io_counters()
     current_time = time.time()
-    elapsed = max(current_time - previous_time, 1e-6)
+    elapsed = max(current_time - prev_time, 1e-6)
 
-    read_speed = (current_io.read_bytes - previous_io.read_bytes) / (1024**2) / elapsed
-    write_speed = (
-        (current_io.write_bytes - previous_io.write_bytes) / (1024**2) / elapsed
-    )
+    read_speed = (current_io.read_bytes - prev_io.read_bytes) / (1024**2) / elapsed
+    write_speed = (current_io.write_bytes - prev_io.write_bytes) / (1024**2) / elapsed
 
+    # Save state for next tick
+    _collect_io_stats.prev_io = current_io
+    _collect_io_stats.prev_time = current_time
+
+    return read_speed, write_speed
+
+
+def _collect_partitions() -> list[dict]:
+    """
+    Collect mounted partitions and usage info.
+    """
     partitions = []
+
     for p in psutil.disk_partitions():
         try:
             usage = psutil.disk_usage(p.mountpoint)
         except (PermissionError, FileNotFoundError, OSError):
             continue
+
         partitions.append(
             {
                 "device": p.device,
@@ -177,52 +188,80 @@ def render_disk_page(content_win: curses.window) -> None:
                 "usage": usage,
             }
         )
+
     partitions.sort(key=lambda d: d["usage"].percent, reverse=True)
+    return partitions[:4]  # We only display the top 4
 
-    # Store for next call
-    render_disk_page._prev_io = current_io
-    render_disk_page._prev_time = current_time
 
-    READ_HISTORY.append(max(0.0, read_speed))
-    WRITE_HISTORY.append(max(0.0, write_speed))
-
-    # Draw disk usage
-    y = 1
+def _render_disk_usage(
+    content_win: curses.window, y: int, partitions: list[dict]
+) -> int:
+    """
+    Render the Disk Usage section and return the updated y position.
+    """
     draw_section_header(content_win, y, "Disk Usage")
     y += 1
-    for part in partitions[:4]:
+
+    for part in partitions:
         draw_bar(content_win, y, 2, part["device"][-12:], part["usage"].percent)
         content_win.addstr(
             y + 1,
             4,
-            f"{part['mountpoint']} ({part['fstype']}) {format_bytes(part['usage'].used)} / {format_bytes(part['usage'].total)}",
+            f"{part['mountpoint']} ({part['fstype']})  "
+            f"{format_bytes(part['usage'].used)} / {format_bytes(part['usage'].total)}",
         )
         y += 3
 
-    # Draw I/O speeds
+    return y
+
+
+def _render_io_activity(
+    content_win: curses.window,
+    y: int,
+    read_speed: float,
+    write_speed: float,
+) -> None:
+    """
+    Render the I/O speeds and historical sparklines.
+    """
     draw_section_header(content_win, y, "I/O Activity")
     y += 1
+
     content_win.addstr(y, 2, f"Read  : {read_speed:6.2f} MB/s")
     content_win.addstr(y + 1, 2, f"Write : {write_speed:6.2f} MB/s")
     y += 3
+
+    width = content_win.getmaxyx()[1] - 6
+
     draw_sparkline(
-        content_win,
-        y,
-        2,
-        list(READ_HISTORY),
-        width=content_win.getmaxyx()[1] - 6,
-        label="Read",
-        unit=" MB/s",
+        content_win, y, 2, list(READ_HISTORY), width=width, label="Read", unit=" MB/s"
     )
     draw_sparkline(
         content_win,
         y + 1,
         2,
         list(WRITE_HISTORY),
-        width=content_win.getmaxyx()[1] - 6,
+        width=width,
         label="Write",
         unit=" MB/s",
     )
+
+
+def render_disk_page(content_win: curses.window) -> None:
+    """
+    Render the Disk & I/O monitor page.
+    """
+    # 1. Collect stats
+    read_speed, write_speed = _collect_io_stats()
+    partitions = _collect_partitions()
+
+    READ_HISTORY.append(max(0.0, read_speed))
+    WRITE_HISTORY.append(max(0.0, write_speed))
+
+    # 2. Render sections
+    y = 1
+    y = _render_disk_usage(content_win, y, partitions)
+    _render_io_activity(content_win, y, read_speed, write_speed)
 
 
 def render_disk(
