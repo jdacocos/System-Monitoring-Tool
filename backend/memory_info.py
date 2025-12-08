@@ -143,8 +143,8 @@ def get_swap_memory() -> Smem:
     if vmstat_data is not None:
         for line in vmstat_data.splitlines():
             if line.startswith("pswpin"):
-                sin = int(line.split()[1]) * 4096  # pages → bytes
+                sin = int(line.split()[1]) * 4096  # pages -> bytes
             elif line.startswith("pswpout"):
-                sout = int(line.split()[1]) * 4096  # pages → bytes
+                sout = int(line.split()[1]) * 4096  # pages -> bytes
 
     return Smem(total, used, free, percent, sin, sout)
