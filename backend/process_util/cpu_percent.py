@@ -34,29 +34,23 @@ def _read_proc_stat_total() -> int:
         int: Sum of USER, NICE, SYSTEM, and IDLE jiffies.
              Returns 0 if /proc/stat cannot be read or is malformed.
     """
-
     total_jiffies = 0
     stat_path = "/proc/stat"
     lines = read_lines(stat_path)
-    if not lines:
-        print(f"Error: {stat_path} could not be read")
-        return 0
 
-    first_line = lines[0]
-    if not first_line.startswith("cpu "):
-        print(f"Error: {stat_path} first line does not start with 'cpu '")
-        return 0
-
-    fields = first_line.split()
-    try:
-        total_jiffies = (
-            int(fields[CpuStatIndex.USER + 1])
-            + int(fields[CpuStatIndex.NICE + 1])
-            + int(fields[CpuStatIndex.SYSTEM + 1])
-            + int(fields[CpuStatIndex.IDLE + 1])
-        )
-    except (IndexError, ValueError) as e:
-        print(f"Error parsing {stat_path}: {e}")
+    if lines:
+        first_line = lines[0]
+        if first_line.startswith("cpu "):
+            fields = first_line.split()
+            try:
+                total_jiffies = (
+                    int(fields[CpuStatIndex.USER + 1])
+                    + int(fields[CpuStatIndex.NICE + 1])
+                    + int(fields[CpuStatIndex.SYSTEM + 1])
+                    + int(fields[CpuStatIndex.IDLE + 1])
+                )
+            except (IndexError, ValueError):
+                total_jiffies = 0
 
     return total_jiffies
 
@@ -72,22 +66,19 @@ def read_proc_pid_time(pid: int) -> int:
         int: Sum of utime and stime jiffies for the process.
              Returns 0 if the process does not exist or cannot be read.
     """
-
     stat_path = f"/proc/{pid}/stat"
     total_proc_jiffies = 0
     content: str | None = read_file(stat_path)
-    if content is None:
-        print(f"Error: {stat_path} could not be read")
-        return 0
 
-    fields = content.split()
-    try:
-        if len(fields) > ProcessStateIndex.STIME:
-            utime = int(fields[ProcessStateIndex.UTIME])
-            stime = int(fields[ProcessStateIndex.STIME])
-            total_proc_jiffies = utime + stime
-    except (IndexError, ValueError) as e:
-        print(f"Error parsing {stat_path}: {e}")
+    if content is not None:
+        fields = content.split()
+        try:
+            if len(fields) > ProcessStateIndex.STIME:
+                utime = int(fields[ProcessStateIndex.UTIME])
+                stime = int(fields[ProcessStateIndex.STIME])
+                total_proc_jiffies = utime + stime
+        except (IndexError, ValueError):
+            total_proc_jiffies = 0
 
     return total_proc_jiffies
 

@@ -29,7 +29,6 @@ def get_process_vsz(pid: int) -> int:
     Returns:
         int: VSZ in KB, or 0 if the process cannot be read or the value is invalid.
     """
-
     vsz_kb = 0
     stat_content = read_file(f"/proc/{pid}/stat")
 
@@ -39,14 +38,7 @@ def get_process_vsz(pid: int) -> int:
             try:
                 vsz_bytes = int(fields[ProcessStateIndex.VSZ])
                 vsz_kb = vsz_bytes // ProcStatmIndex.BYTES_TO_KB
-            except ValueError as e:
-                print(
-                    f"[ERROR] Invalid VSZ value for PID "
-                    f"{pid}: {fields[ProcessStateIndex.VSZ]} ({e})"
-                )
-        else:
-            print(f"[WARN] Not enough fields in /proc/{pid}/stat to read VSZ")
-    else:
-        print(f"[WARN] Could not read /proc/{pid}/stat")
+            except ValueError:
+                vsz_kb = 0
 
     return vsz_kb

@@ -43,10 +43,7 @@ def read_meminfo_total() -> int:
                 try:
                     mem_total_kb = int(fields[MemInfoIndex.MEMTOTAL_VALUE])
                 except ValueError:
-                    print(
-                        f"Warning: Could not convert MemTotal value "
-                        f"to int in {meminfo_path}: {fields[MemInfoIndex.MEMTOTAL_VALUE]}"
-                    )
+                    mem_total_kb = 0
             break
     else:
         print(f"Warning: MemTotal not found in {meminfo_path}")
@@ -76,14 +73,7 @@ def get_process_rss(pid: int) -> int:
                 page_size_kb = os.sysconf("SC_PAGESIZE") // ProcStatmIndex.BYTES_TO_KB
                 rss_pages = int(fields[ProcStatmIndex.RSS])
                 rss_kb = rss_pages * page_size_kb
-            except ValueError:
-                print(
-                    f"Warning: Could not convert RSS value to int for PID {pid}: "
-                    f"{fields[ProcStatmIndex.RSS]}"
-                )
-            except AttributeError:
-                print("Warning: os.sysconf not supported on this system.")
-    else:
-        print(f"Warning: /proc/{pid}/statm could not be read")
+            except (ValueError, AttributeError):
+                rss_kb = 0
 
     return rss_kb

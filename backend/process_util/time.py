@@ -35,23 +35,23 @@ def format_time_column(total_seconds: float) -> str:
     Returns:
         str: Formatted TIME string.
     """
-
+    result = ""
     total_seconds = int(total_seconds)
-
     days = total_seconds // TimeFormatIndex.SECONDS_PER_DAY
     remainder = total_seconds % TimeFormatIndex.SECONDS_PER_DAY
-
     hours = remainder // TimeFormatIndex.SECONDS_PER_HOUR
     remainder %= TimeFormatIndex.SECONDS_PER_HOUR
-
     minutes = remainder // TimeFormatIndex.SECONDS_PER_MINUTE
     seconds = remainder % TimeFormatIndex.SECONDS_PER_MINUTE
 
     if days > 0:
-        return f"{days}-{hours:02}:{minutes:02}:{seconds:02}"
-    if hours > 0:
-        return f"{hours}:{minutes:02}:{seconds:02}"
-    return f"{minutes}:{seconds:02}"  # M:SS
+        result = f"{days}-{hours:02}:{minutes:02}:{seconds:02}"
+    elif hours > 0:
+        result = f"{hours}:{minutes:02}:{seconds:02}"
+    else:
+        result = f"{minutes}:{seconds:02}"  # M:SS
+
+    return result
 
 
 def get_process_time(pid: int) -> str:
@@ -65,10 +65,11 @@ def get_process_time(pid: int) -> str:
         str: CPU time formatted as '[[dd-]hh:]mm:ss'.
              Returns '0:00' if the process cannot be read or has no CPU time.
     """
-
+    result = TimeFormatIndex.DEFAULT_TIME
     total_jiffies = read_proc_pid_time(pid)
-    if total_jiffies <= 0:
-        return TimeFormatIndex.DEFAULT_TIME
 
-    total_seconds = total_jiffies / os.sysconf(os.sysconf_names["SC_CLK_TCK"])
-    return format_time_column(total_seconds)
+    if total_jiffies > 0:
+        total_seconds = total_jiffies / os.sysconf(os.sysconf_names["SC_CLK_TCK"])
+        result = format_time_column(total_seconds)
+
+    return result

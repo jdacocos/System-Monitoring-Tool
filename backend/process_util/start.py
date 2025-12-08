@@ -35,12 +35,15 @@ def _interpret_process_start(fields: list[str], _pid: int) -> str:
     Returns:
         str: Formatted START column string or an error message if calculation fails.
     """
+    result = "Error"
 
     try:
         start_time_seconds = read_process_start_epoch(fields)
-        return _format_start_column(start_time_seconds)
-    except (ValueError, IndexError) as e:
-        return f"Error: {e}"
+        result = _format_start_column(start_time_seconds)
+    except (ValueError, IndexError, RuntimeError) as e:
+        result = f"Error: {e}"
+
+    return result
 
 
 def read_process_start_epoch(fields: list[str]) -> float:
@@ -57,7 +60,7 @@ def read_process_start_epoch(fields: list[str]) -> float:
         ValueError: If stat fields are invalid or STARTTIME is missing.
         RuntimeError: If /proc/uptime cannot be read.
     """
-
+    start_time_seconds = 0.0
     uptime_path = "/proc/uptime"
 
     if not fields or len(fields) <= ProcessStateIndex.STARTTIME:
@@ -65,16 +68,16 @@ def read_process_start_epoch(fields: list[str]) -> float:
 
     start_ticks = int(fields[ProcessStateIndex.STARTTIME])
     clock_ticks = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
-
     uptime_content = read_file(uptime_path)
+
     if not uptime_content:
-        raise RuntimeError("Unable to read {uptime_path}")
+        raise RuntimeError(f"Unable to read {uptime_path}")
 
     uptime_fields = uptime_content.split()
     uptime_seconds = float(uptime_fields[UptimeIndex.SYSTEM_UPTIME])
-
     now_seconds = time.time()
     start_time_seconds = now_seconds - (uptime_seconds - start_ticks / clock_ticks)
+
     return start_time_seconds
 
 
@@ -89,15 +92,18 @@ def _format_start_column(start_time_seconds: float) -> str:
     Returns:
         str: Formatted start time as HH:MM, MonDD, or YYYY depending on age.
     """
-
+    result = ""
     start_tm = time.localtime(start_time_seconds)
     now_tm = time.localtime(time.time())
 
     if start_tm.tm_year == now_tm.tm_year and start_tm.tm_yday == now_tm.tm_yday:
-        return time.strftime("%H:%M", start_tm)
-    if start_tm.tm_year == now_tm.tm_year:
-        return time.strftime("%b%d", start_tm)
-    return str(start_tm.tm_year)
+        result = time.strftime("%H:%M", start_tm)
+    elif start_tm.tm_year == now_tm.tm_year:
+        result = time.strftime("%b%d", start_tm)
+    else:
+        result = str(start_tm.tm_year)
+
+    return result
 
 
 def get_process_start(pid: int) -> str:
@@ -110,6 +116,7 @@ def get_process_start(pid: int) -> str:
     Returns:
         str: Formatted start time for the process, or an error message.
     """
-
     fields = read_process_stat_fields(pid)
-    return _interpret_process_start(fields, pid)
+    result = _interpret_process_start(fields, pid)
+
+    return result

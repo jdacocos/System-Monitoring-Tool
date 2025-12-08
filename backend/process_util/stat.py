@@ -43,7 +43,6 @@ def read_process_stat_fields(pid: int) -> list[str]:
     stat_path = f"/proc/{pid}/stat"
     content = read_file(stat_path)
     if not content:
-        print(f"[WARN] Could not read {stat_path}")
         return []
     return content.split()
 

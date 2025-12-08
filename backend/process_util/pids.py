@@ -35,7 +35,7 @@ def get_process_pids(proc_path: str = "/proc") -> list[int]:
         for entry in entries:
             if entry.isdigit():
                 pids.append(int(entry))
-    except (FileNotFoundError, PermissionError) as e:
-        print(f"Warning: Cannot read {proc_path}: {e}")
+    except (FileNotFoundError, PermissionError):
+        pass
 
     return pids
