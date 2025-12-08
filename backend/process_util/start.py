@@ -40,8 +40,8 @@ def _interpret_process_start(fields: list[str], _pid: int) -> str:
     try:
         start_time_seconds = read_process_start_epoch(fields)
         result = _format_start_column(start_time_seconds)
-    except (ValueError, IndexError, RuntimeError) as e:
-        result = f"Error: {e}"
+    except (ValueError, IndexError, RuntimeError):
+        result = "?"
 
     return result
 

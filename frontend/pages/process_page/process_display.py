@@ -108,27 +108,32 @@ def _format_process_line(proc: ProcessInfo, width: int) -> str:
     Returns:
         str: Formatted process row text.
     """
-
+    # Handle None values with defaults
+    user_display = proc.user or "?"
     tty_display = (proc.tty or "?")[: COL_WIDTHS["tty"] - 1]
+    stat_display = proc.stat or "?"
+    start_display = proc.start or "?"
+    time_display = proc.time or "0:00"
+    command_display_full = proc.command or "?"
 
     # Calculate the available width for the command column
     fixed_width = sum(v for k, v in COL_WIDTHS.items() if k != "command")
     command_width = max(10, width - 3 - fixed_width)  # 2 left padding + 1 right border
-    command_display = (proc.command or "")[:command_width]
+    command_display = command_display_full[:command_width]
 
     return (
         PROCESS_ROW_TEMPLATE.format(
-            user=proc.user,
+            user=user_display,
             pid=proc.pid,
             cpu=f"{proc.cpu_percent:.1f}",
             mem=f"{proc.mem_percent:.1f}",
             vsz=proc.vsz,
             rss=proc.rss,
             tty=tty_display,
-            stat=proc.stat,
+            stat=stat_display,
             nice=proc.nice,
-            start=proc.start,
-            time=proc.time,
+            start=start_display,
+            time=time_display,
             user_w=COL_WIDTHS["user"],
             pid_w=COL_WIDTHS["pid"],
             cpu_w=COL_WIDTHS["cpu"],
